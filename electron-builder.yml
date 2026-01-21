@@ -1,0 +1,78 @@
+appId: com.qq-cache-image-viewer
+productName: QQCacheImageViewer
+copyright: Copyright © 2024
+extends: null
+
+# 完全禁用代码签名（解决权限问题）
+forceCodeSigning: false
+
+directories:
+  buildResources: public
+  output: release
+
+# 启用最大压缩以减小体积
+compression: maximum
+
+files:
+  - dist/**/*
+  - public/**/*
+  - node_modules/**/*  
+  - package.json
+  # 排除开发和文档文件
+  - "!**/{.git,.svn,.hg,CVS,.idea,.vscode,.gitignore,.gitattributes,*.md,README*,CHANGELOG*,LICENSE*,*.test.js,*.spec.js,test,tests,spec}"
+  # 排除 node_modules 中的冗余文件
+  - "!node_modules/**/CHANGELOG*"
+  - "!node_modules/**/README*"
+  - "!node_modules/**/*.md"
+  - "!node_modules/**/*.map"
+  - "!node_modules/**/{test,tests,__tests__}/**"
+  - "!node_modules/**/*.d.ts"
+  - "!node_modules/**/docs/**"
+  - "!node_modules/**/examples/**"
+  - "!node_modules/**/.github/**"
+  - "!node_modules/**/coverage/**"
+
+extraResources:
+  - from: node_modules/sharp
+    to: node_modules/sharp
+    filter:
+      - "**/*"
+  - from: node_modules/better-sqlite3
+    to: node_modules/better-sqlite3
+    filter:
+      - "**/*"
+
+asar: true
+asarUnpack:
+  - "**/node_modules/sharp/**/*"
+  - "**/node_modules/better-sqlite3/**/*"
+
+nodeGypRebuild: false
+npmRebuild: false
+
+win:
+  target:
+    # NSIS 安装包（需要安装）
+    - target: nsis
+      arch:
+        - x64
+    # 便携版（无需安装，解压即用）
+    - target: portable
+      arch:
+        - x64
+  # 跳过代码签名（避免权限问题）
+  verifyUpdateCodeSignature: false
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  # 跳过差分更新工具（避免下载签名工具）
+  differentialPackage: false
+
+# 便携版配置
+portable:
+  artifactName: "${productName}-${version}-portable.exe"
+
+
