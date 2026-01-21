@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/main",
+    "rootDir": "../",
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "./**/*",
+    "../shared/**/*"
+  ],
+  "exclude": [
+    "../../node_modules",
+    "../../dist",
+    "../../build",
+    "../renderer/**/*",
+    "**/__tests__/**/*",
+    "**/*.test.ts"
+  ]
+}
