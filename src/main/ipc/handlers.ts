@@ -11,7 +11,7 @@
  * with `settingsSlice.ts`, which calls ipcRenderer.invoke directly. All other
  * channels return `{success, data}` envelopes which `ipc-client.ts` unwraps.
  */
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 
 import { IPC } from '../../shared/ipc-channels';
@@ -272,5 +272,10 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
   registerRawHandler(IPC.ResetSettings, schemas.ResetSettingsInput, () => {
     resetSettings();
     return getSettings();
+  });
+
+  // ---- Renderer diagnostics -----------------------------------------------
+  ipcMain.handle('log-renderer-error', (_evt, payload: unknown) => {
+    console.error('[renderer crash]', payload);
   });
 }

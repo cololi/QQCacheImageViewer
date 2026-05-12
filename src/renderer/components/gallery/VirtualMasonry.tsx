@@ -144,10 +144,10 @@ export const VirtualMasonry: React.FC<VirtualMasonryProps> = ({
   // Greedy column packing. Stable across re-renders via useMemo so the
   // expensive O(n) loop only runs when inputs actually change.
   const { positions, totalHeight } = useMemo(() => {
-    const out: ItemPosition[] = new Array(itemCount);
     if (columnCount < 1 || containerWidth <= 0 || itemCount === 0) {
-      return { positions: out, totalHeight: 0 };
+      return { positions: [] as ItemPosition[], totalHeight: 0 };
     }
+    const out: ItemPosition[] = new Array(itemCount);
     const colWidth = (containerWidth - gap * (columnCount - 1)) / columnCount;
     const colHeights = new Array<number>(columnCount).fill(0);
 

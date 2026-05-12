@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, protocol, net } from 'electron';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { initializeDatabase, closeDatabase } from './services/db-service';
 import { abortScan } from './services/image-scanner';
 import { setAllowedRoots } from './utils/path-guard';
@@ -87,7 +88,6 @@ app.on('ready', () => {
     const decodedUrl = decodeURIComponent(url);
     try {
       // Use pathToFileURL to properly handle encoding (spaces, etc.)
-      const { pathToFileURL } = require('url');
       return net.fetch(pathToFileURL(decodedUrl).toString());
     } catch (error) {
       console.error('Protocol error:', error);
