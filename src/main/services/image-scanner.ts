@@ -71,11 +71,6 @@ export const detectQQCachePaths = async (): Promise<string[]> => {
       console.warn('Could not get documents path', e);
     }
 
-    // Add fallback paths
-    const username = process.env.USERNAME || 'admin';
-    roots.add(`C:\\Users\\${username}\\Documents\\Tencent Files`);
-    roots.add(`C:\\Users\\${username}\\AppData\\Local\\Tencent`);
-
     console.log('Scanning for QQ directories in roots:', [...roots]);
 
     // 并发检查所有根目录
@@ -148,7 +143,6 @@ export const detectQQCachePaths = async (): Promise<string[]> => {
  */
 export const validateDirectory = async (dirPath: string): Promise<boolean> => {
   try {
-    await access(dirPath, fs.constants.F_OK);
     const statResult = await stat(dirPath);
     return statResult.isDirectory();
   } catch (error) {
@@ -233,15 +227,10 @@ const processFile = async (
 
     const thumbPath = await getThumbnailPath(basePath, yearMonth, hash, ext);
 
-    // Get dimensions from thumbnail if available, otherwise from original
-    let dimensions: { width?: number; height?: number } = {};
+    // Get dimensions from thumbnail if available, otherwise from original.
+    // sharp's own open handles a missing/unreadable file (returns {}), no pre-check needed.
     const imageSource = thumbPath || filePath;
-    try {
-      await access(imageSource, fs.constants.F_OK);
-      dimensions = await getImageDimensions(imageSource);
-    } catch {
-      // Skip if file not accessible
-    }
+    const dimensions = await getImageDimensions(imageSource);
 
     const ratio =
       dimensions.width && dimensions.height ? dimensions.width / dimensions.height : undefined;
@@ -400,41 +389,10 @@ export const scanQQCacheDirectory = async (
       return [];
     }
 
-    // 2. Scan each task
+    // 2. Scan each task. Progress is coarse per-month: basePercent from completed
+    //    tasks + the current task's fractional share. Total file count is unknown
+    //    up front (would require pre-listing every Ori dir), so we don't report it.
     let totalScanned = 0;
-    // We don't know total files ahead of time unless we count them first,
-    // but we can estimate or just use task count for coarse progress,
-    // or rely on the previous implementation's style which accumulates total files as it goes?
-    // The previous implementation used `totalFiles` (accumulated) and `totalScanned` (accumulated count of files).
-    // It passed `files.length` to onProgress.
-
-    // To provide consistent progress, we might want to just count tasks (months) or do a quick file count.
-    // Let's stick to the previous pattern:
-    // It passed: onProgress(month, totalScanned, totalFiles + total, percent)
-
-    // Since we are iterating multiple paths/months, let's treat the progress bar as 0-100% based on TASKS (months)
-    // or keep the file counter if possible.
-    // The original code calculated percent based on `totalScanned` / `months.length` which is WRONG if it meant files vs months.
-    // Original: `const percent = (totalScanned / (months.length * 100)) * 100;`
-    // Wait, `processed` passed from `scanMonthDirectory` is number of files.
-    // So `totalScanned` is total files scanned so far.
-    // But it divided by `months.length`? That seems weird in the original code unless `months.length * 100` was an arbitrary estimate that 1 month = 100 files?
-    // Actually looking at original: `const percent = (totalScanned / (months.length * 100)) * 100` -> `totalScanned / months.length`.
-    // This implies `totalScanned` is NOT files but... wait:
-    // `scanMonthDirectory` calls callback with `(processed, total_files_in_month)`.
-    // In `scanQQCacheDirectory`: `totalScanned++` is inside the callback.
-    // So `totalScanned` counts callback invocations?
-    // NO! `scanMonthDirectory` calls `onProgress` for EVERY file?
-    // Let's check `scanMonthDirectory`.
-    // Line 165: `onProgress(processed, files.length)`.
-    // Yes, it's called per file.
-    // So `totalScanned` in `scanQQCacheDirectory` tracks total files across all months.
-    // And `percent` calculation `(totalScanned / (months.length * 100)) * 100` assumes roughly 100 files per month? That's a very rough heuristic.
-
-    // Let's improve this. We know `tasks.length` (total months).
-    // We can't easily know total files without listing them all first.
-    // Let's use `tasks.length` to determine completion percentage roughly, OR update percent based on `taskIndex / tasks.length`.
-
     let currentTaskIndex = 0;
 
     for (const task of tasks) {

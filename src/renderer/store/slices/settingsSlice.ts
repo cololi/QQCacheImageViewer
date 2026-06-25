@@ -96,13 +96,6 @@ export const settingsSlice = createSlice({
       (state.data.preferences as unknown as UserPreferences)[action.payload.key] =
         action.payload.value;
     },
-
-    /**
-     * 清除错误状态
-     */
-    clearError: (state) => {
-      state.error = null;
-    },
   },
 
   extraReducers: (builder) => {
@@ -167,6 +160,6 @@ export const selectPreferences = (state: { settings: SettingsState }) =>
 export const selectSettingsLoading = (state: { settings: SettingsState }) => state.settings.loading;
 export const selectSettingsError = (state: { settings: SettingsState }) => state.settings.error;
 
-export const { updatePreference, clearError } = settingsSlice.actions;
+export const { updatePreference } = settingsSlice.actions;
 
 export default settingsSlice.reducer;

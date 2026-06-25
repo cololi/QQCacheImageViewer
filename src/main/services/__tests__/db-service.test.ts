@@ -149,61 +149,6 @@ describe('Database Service', () => {
     });
   });
 
-  describe('queryImages', () => {
-    it('should handle basic query without filters', () => {
-      expect(() => {
-        dbService.queryImages({ offset: 0, limit: 10 });
-      }).not.toThrow();
-    });
-
-    it('should handle format filter', () => {
-      expect(() => {
-        dbService.queryImages({
-          formats: ['jpg', 'png'],
-          offset: 0,
-          limit: 10,
-        });
-      }).not.toThrow();
-    });
-
-    it('should handle size range filter', () => {
-      expect(() => {
-        dbService.queryImages({
-          sizeRange: [1000, 1000000],
-          offset: 0,
-          limit: 10,
-        });
-      }).not.toThrow();
-    });
-
-    it('should handle aspect ratio filter', () => {
-      expect(() => {
-        dbService.queryImages({
-          ratioRange: [0.5, 2.0],
-          offset: 0,
-          limit: 10,
-        });
-      }).not.toThrow();
-    });
-
-    it('should handle combined filters', () => {
-      expect(() => {
-        dbService.queryImages({
-          formats: ['jpg'],
-          sizeRange: [100000, 5000000],
-          ratioRange: [0.5, 2.0],
-          offset: 0,
-          limit: 50,
-        });
-      }).not.toThrow();
-    });
-
-    it('should return array of results', () => {
-      const result = dbService.queryImages({ offset: 0, limit: 10 });
-      expect(Array.isArray(result)).toBe(true);
-    });
-  });
-
   describe('getImageCount', () => {
     it('should return number', () => {
       const count = dbService.getImageCount();

@@ -135,30 +135,3 @@ export function resetSettings(): void {
   store.set(DEFAULT_SETTINGS);
   store.set('lastUpdated', new Date().toISOString());
 }
-
-/**
- * Reset specific preference to default
- */
-export function resetPreference<K extends keyof UserPreferences>(key: K): void {
-  const defaultValue = DEFAULT_SETTINGS.preferences[key];
-  setPreference(key, defaultValue);
-}
-
-/**
- * Check if settings file exists and is valid
- */
-export function hasValidSettings(): boolean {
-  try {
-    const settings = store.store;
-    return settings && settings.preferences !== undefined;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get settings file path (for debugging)
- */
-export function getSettingsPath(): string {
-  return store.path;
-}

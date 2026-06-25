@@ -16,10 +16,6 @@ export function addAllowedRoot(root: string): void {
   }
 }
 
-export function getAllowedRoots(): readonly string[] {
-  return allowedRoots;
-}
-
 function normalize(p: string): string {
   return process.platform === 'win32' ? p.toLowerCase() : p;
 }

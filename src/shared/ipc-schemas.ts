@@ -23,8 +23,6 @@ export const ScanImagesInput = z
     incremental: z.boolean().optional(),
     includeTemp: z.boolean().optional(),
   })
-  .partial()
-  .optional()
   .default({});
 
 export const GetImagesInput = z.object({
