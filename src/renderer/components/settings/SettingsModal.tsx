@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Modal, Form, Input, Button, message, Popconfirm, Radio } from 'antd';
+import { Modal, Form, Input, Button, message, Popconfirm } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,7 +14,6 @@ import {
   resetToDefaults,
 } from '../../store/slices/settingsSlice';
 import { RootState, AppDispatch } from '../../store/store';
-import { UserPreferences } from '../../../shared/settings-types';
 
 interface SettingsModalProps {
   open: boolean;
@@ -41,11 +40,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
       setLoading(true);
       const values = await form.validateFields();
 
-      // 合并当前设置
+      // Merge over existing preferences — the form only holds a subset of fields
+      // (e.g. defaultExportPath), so replacing wholesale would wipe theme etc.
       const result = await dispatch(
         saveSettings({
           ...settings,
-          preferences: values as UserPreferences,
+          preferences: { ...preferences, ...values },
         }),
       );
 
@@ -110,13 +110,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
           extra="图片导出或保存时的默认文件夹"
         >
           <Input placeholder="输入默认导出路径" />
-        </Form.Item>
-
-        <Form.Item name="theme" label={t('settings.theme', '主题')} extra="切换浅色或深色界面">
-          <Radio.Group>
-            <Radio.Button value="light">{t('settings.themeLight', '浅色')}</Radio.Button>
-            <Radio.Button value="dark">{t('settings.themeDark', '深色')}</Radio.Button>
-          </Radio.Group>
         </Form.Item>
       </Form>
     </Modal>

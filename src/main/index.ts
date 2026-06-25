@@ -3,7 +3,8 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { initializeDatabase, closeDatabase } from './services/db-service';
 import { abortScan } from './services/image-scanner';
-import { setAllowedRoots } from './utils/path-guard';
+import { setAllowedRoots, isSafePath } from './utils/path-guard';
+import { getSettings } from './services/settings-service';
 import { registerAllHandlers } from './ipc/handlers';
 
 function initializePathGuard(): void {
@@ -21,6 +22,10 @@ function initializePathGuard(): void {
   } else if (process.platform === 'win32' && process.env.USERPROFILE) {
     roots.add(path.join(process.env.USERPROFILE, 'AppData', 'Local'));
   }
+  // Allow the configured export dir (default or user-typed) so SaveImage/export
+  // copies don't fail PATH_NOT_ALLOWED. Re-read each launch so it survives restart.
+  const exportPath = getSettings().preferences.defaultExportPath;
+  if (exportPath) roots.add(exportPath);
   setAllowedRoots(Array.from(roots));
 }
 
@@ -87,6 +92,11 @@ app.on('ready', () => {
     const url = request.url.replace('local-resource://', '');
     const decodedUrl = decodeURIComponent(url);
     try {
+      // Trust boundary: the renderer can request any local-resource:// URL, so
+      // reject anything outside the allowlist before reading bytes off disk.
+      if (!isSafePath(decodedUrl)) {
+        return new Response('Forbidden', { status: 403 });
+      }
       // Use pathToFileURL to properly handle encoding (spaces, etc.)
       return net.fetch(pathToFileURL(decodedUrl).toString());
     } catch (error) {

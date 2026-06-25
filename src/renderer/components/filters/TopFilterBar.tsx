@@ -9,7 +9,10 @@ import {
   SearchOutlined,
   SettingOutlined,
   CloseCircleFilled,
+  SunOutlined,
+  MoonOutlined,
 } from '@ant-design/icons';
+import { useTheme } from '../../hooks/useTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { setSortField, setSortOrder } from '../../store/slices/imageSlice';
@@ -47,8 +50,10 @@ export const TopFilterBar: React.FC<TopFilterBarProps> = ({
   onOpenSettings,
 }) => {
   const dispatch = useDispatch();
-  const { sortField, sortOrder, images } = useSelector((state: RootState) => state.images);
+  const { sortField, sortOrder } = useSelector((state: RootState) => state.images);
+  const imageCount = useSelector((state: RootState) => state.images.images.length);
   const filters = useSelector((state: RootState) => state.filters);
+  const { theme, toggleTheme } = useTheme();
 
   const activeFiltersCount =
     filters.selectedCategories.length +
@@ -144,7 +149,7 @@ export const TopFilterBar: React.FC<TopFilterBarProps> = ({
           {/* Image Count Badge */}
           <div className="flex items-center gap-1.5 rounded-lg border border-gray-200/80 bg-white px-3 py-1.5 shadow-sm">
             <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-semibold text-gray-700">{images.length}</span>
+            <span className="text-xs font-semibold text-gray-700">{imageCount}</span>
             <span className="text-xs text-gray-500">张</span>
           </div>
         </div>
@@ -230,6 +235,16 @@ export const TopFilterBar: React.FC<TopFilterBarProps> = ({
                 tooltip={{ formatter: (val) => `${val}列` }}
               />
             </div>
+
+            {/* Theme Toggle */}
+            <Tooltip title={theme === 'dark' ? '切换浅色' : '切换深色'}>
+              <Button
+                icon={theme === 'dark' ? <SunOutlined /> : <MoonOutlined />}
+                onClick={toggleTheme}
+                size="small"
+                className="border-gray-200/80"
+              />
+            </Tooltip>
 
             {/* Settings Button */}
             <Button

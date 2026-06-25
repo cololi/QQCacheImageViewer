@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { Layout, ConfigProvider, App as AntdApp, Modal } from 'antd';
+import { Layout, ConfigProvider, App as AntdApp, Modal, Spin } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { AnimatePresence } from 'framer-motion';
 
@@ -61,7 +61,7 @@ const AppContent: React.FC = () => {
   const { message: messageApi } = AntdApp.useApp();
 
   const PAGE_SIZE = 200;
-  const [hasMore, setHasMore] = useState(true);
+  const hasMoreRef = useRef(true);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Set up listener for scan progress
@@ -155,7 +155,7 @@ const AppContent: React.FC = () => {
           limit: PAGE_SIZE,
         });
         const newImages = imageList || [];
-        setHasMore(newImages.length >= PAGE_SIZE);
+        hasMoreRef.current = newImages.length >= PAGE_SIZE;
         if (append) {
           dispatch(setImages([...currentImages, ...newImages]));
         } else {
@@ -171,14 +171,14 @@ const AppContent: React.FC = () => {
   const loadingRef = useRef(false);
 
   const loadMore = useCallback(() => {
-    if (loadingRef.current || !hasMore) return;
+    if (loadingRef.current || !hasMoreRef.current) return;
     loadingRef.current = true;
     dispatch(setLoading(true));
     loadImages(currentMonth || '', true).finally(() => {
       loadingRef.current = false;
       dispatch(setLoading(false));
     });
-  }, [hasMore, currentMonth, loadImages, dispatch]);
+  }, [currentMonth, loadImages, dispatch]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -205,6 +205,7 @@ const AppContent: React.FC = () => {
   const handleMonthClick = async (yearMonth: string) => {
     const effectiveMonth = yearMonth === '' ? null : yearMonth;
     dispatch(setCurrentMonth(effectiveMonth));
+    hasMoreRef.current = true;
     dispatch(setLoading(true));
     try {
       await loadImages(yearMonth, false);
@@ -394,7 +395,6 @@ const AppContent: React.FC = () => {
           {filteredImages.length > 0 && (
             <ImageViews
               images={filteredImages}
-              loading={loading}
               onImageSelect={(image) => {
                 setPreviewingImage(image);
                 setPreviewVisible(true);
@@ -406,7 +406,12 @@ const AppContent: React.FC = () => {
               onDeleteSelected={handleDeleteSelected}
             />
           )}
-          {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+          {loading && (
+            <div style={{ textAlign: 'center', padding: 12 }}>
+              <Spin />
+            </div>
+          )}
+          <div ref={sentinelRef} style={{ height: 1 }} />
         </Content>
       </Layout>
 

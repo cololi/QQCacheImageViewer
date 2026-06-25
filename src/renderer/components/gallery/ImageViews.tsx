@@ -1,13 +1,11 @@
 import React from 'react';
-import { Empty, Spin } from 'antd';
+import { Empty } from 'antd';
 import { Image } from '../../../shared/types';
 import { PinterestGrid } from './PinterestGrid';
 import { SelectionBar } from './SelectionBar';
 
-
 interface ImageViewsProps {
   images: Image[];
-  loading: boolean;
   onImageSelect?: (image: Image) => void;
   columnCount?: number;
   previewingImageId?: number | null;
@@ -21,7 +19,6 @@ interface ImageViewsProps {
  */
 export const ImageViews: React.FC<ImageViewsProps> = ({
   images,
-  loading,
   onImageSelect,
   columnCount,
   previewingImageId,
@@ -30,13 +27,9 @@ export const ImageViews: React.FC<ImageViewsProps> = ({
   onDeleteSelected,
 }) => {
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-auto">
-        {loading ? (
-          <div className="flex h-full items-center justify-center">
-            <Spin size="large" />
-          </div>
-        ) : images.length === 0 ? (
+    <div className="flex flex-col">
+      <div className="flex-1">
+        {images.length === 0 ? (
           <Empty description="暂无图片" />
         ) : (
           <PinterestGrid
