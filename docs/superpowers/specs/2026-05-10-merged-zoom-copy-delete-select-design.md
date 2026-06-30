@@ -3,6 +3,7 @@
 **日期：** 2026-05-10
 **状态：** 待审批
 **合并自：**
+
 - `2026-05-10-apple-photos-zoom-copy-fix-design.md`（Spec A）
 - `2026-05-10-delete-and-box-select-design.md`（Spec B）
 
@@ -36,16 +37,16 @@
 
 ## 冲突决议表（合并的核心）
 
-| # | 冲突点 | Spec A | Spec B | **合并决议** |
-|---|--------|--------|--------|------------|
-| 1 | PinterestGrid 普通单击 | 打开预览（layoutId 动画） | 进入多选 + 选中此张 | **打开预览**。多选仅通过 Ctrl/Cmd+click 或拖拽框选进入 |
-| 2 | PinterestGrid 多选单击 | — | 切换该张选中 | **切换该张选中**（不预览）。ESC 退出多选后恢复单击=预览 |
-| 3 | 状态命名 | `selectedImage` / `selectedImageId` | `selectedIds` / `setSelectedIds` | App.tsx 全量改名：**`previewingImage` / `previewingImageId`** vs **`selectedIds`**，消除任何 "selected" 二义 |
-| 4 | ESC 键归属 | 关闭预览 | 退出多选 | **优先级**：preview 打开 → 关预览；否则 selectedIds.length>0 → 清空 selectedIds |
-| 5 | 复选框 vs layoutId | — | 复选框角标在缩略图左上角 | 复选框是缩略图卡片内的**兄弟元素**，不进入 layoutId 共享元素层。`previewingImageId === image.id` 时整张卡片（image + 复选框）一起 `opacity: 0` |
-| 6 | 在缩略图上 mousedown | layoutId 仅做点击 | 不启动橡皮筋（橡皮筋仅在空白处） | 鼠标事件路由：mousedown 落在 `<motion.img>` 上 → 走点击/Ctrl/Shift 分支；落在网格空白 → 启动橡皮筋 |
-| 7 | 缩略图 hover | 无 | 月份 × 按钮的悬停依据（仅 TopFilterBar） | 月份 × 仅在 TopFilterBar 月份 tag 上做 hover；图片 hover 不触发 UI（复选框始终可见） |
-| 8 | 删除当前预览中的图 | — | 未提 | 若 `previewingImage.id ∈ selectedIds` 且执行删除：**先关闭预览（触发 exit 动画到原坐标，但缩略图已经消失）→ 删除完成后 selectedIds 清空**。已知妥协：图片 exit 动画会飞向"已不存在的"格子，视觉上略突兀，但维持一致性 |
+| #   | 冲突点                 | Spec A                              | Spec B                                   | **合并决议**                                                                                                                                                                                                          |
+| --- | ---------------------- | ----------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | PinterestGrid 普通单击 | 打开预览（layoutId 动画）           | 进入多选 + 选中此张                      | **打开预览**。多选仅通过 Ctrl/Cmd+click 或拖拽框选进入                                                                                                                                                                |
+| 2   | PinterestGrid 多选单击 | —                                   | 切换该张选中                             | **切换该张选中**（不预览）。ESC 退出多选后恢复单击=预览                                                                                                                                                               |
+| 3   | 状态命名               | `selectedImage` / `selectedImageId` | `selectedIds` / `setSelectedIds`         | App.tsx 全量改名：**`previewingImage` / `previewingImageId`** vs **`selectedIds`**，消除任何 "selected" 二义                                                                                                          |
+| 4   | ESC 键归属             | 关闭预览                            | 退出多选                                 | **优先级**：preview 打开 → 关预览；否则 selectedIds.length>0 → 清空 selectedIds                                                                                                                                       |
+| 5   | 复选框 vs layoutId     | —                                   | 复选框角标在缩略图左上角                 | 复选框是缩略图卡片内的**兄弟元素**，不进入 layoutId 共享元素层。`previewingImageId === image.id` 时整张卡片（image + 复选框）一起 `opacity: 0`                                                                        |
+| 6   | 在缩略图上 mousedown   | layoutId 仅做点击                   | 不启动橡皮筋（橡皮筋仅在空白处）         | 鼠标事件路由：mousedown 落在 `<motion.img>` 上 → 走点击/Ctrl/Shift 分支；落在网格空白 → 启动橡皮筋                                                                                                                    |
+| 7   | 缩略图 hover           | 无                                  | 月份 × 按钮的悬停依据（仅 TopFilterBar） | 月份 × 仅在 TopFilterBar 月份 tag 上做 hover；图片 hover 不触发 UI（复选框始终可见）                                                                                                                                  |
+| 8   | 删除当前预览中的图     | —                                   | 未提                                     | 若 `previewingImage.id ∈ selectedIds` 且执行删除：**先关闭预览（触发 exit 动画到原坐标，但缩略图已经消失）→ 删除完成后 selectedIds 清空**。已知妥协：图片 exit 动画会飞向"已不存在的"格子，视觉上略突兀，但维持一致性 |
 
 ---
 
@@ -134,16 +135,16 @@ main/index.ts:
 
 ## PinterestGrid 事件路由决策表
 
-| 事件起源 | 修饰键 | isSelectionMode | 行为 |
-|---------|--------|-----------------|------|
-| `<motion.img>` | 无 | false | `onPreview(img)` |
-| `<motion.img>` | 无 | true | `onSelectionChange(toggle id)` |
-| `<motion.img>` | Ctrl/Cmd | 任意 | `onSelectionChange(toggle id)`；`lastSelectedId = id` |
-| `<motion.img>` | Shift | 任意 | 范围选择 `lastSelectedId..id`（若 `lastSelectedId == null` 退化为单选） |
-| 复选框角标 | 任意 | 任意 | `onSelectionChange(toggle id)`；`event.stopPropagation()` 阻止冒泡到 motion.img；点击角标视为"明确的选择意图"，不论模式 |
-| 网格空白 | 任意 | 任意 | 启动橡皮筋；onMouseUp 时 `onSelectionChange(交叠 ids)` |
-| ESC（全局） | — | preview 开 | 关预览 |
-| ESC（全局） | — | preview 关 + selectedIds 非空 | `setSelectedIds([])` |
+| 事件起源       | 修饰键   | isSelectionMode               | 行为                                                                                                                    |
+| -------------- | -------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `<motion.img>` | 无       | false                         | `onPreview(img)`                                                                                                        |
+| `<motion.img>` | 无       | true                          | `onSelectionChange(toggle id)`                                                                                          |
+| `<motion.img>` | Ctrl/Cmd | 任意                          | `onSelectionChange(toggle id)`；`lastSelectedId = id`                                                                   |
+| `<motion.img>` | Shift    | 任意                          | 范围选择 `lastSelectedId..id`（若 `lastSelectedId == null` 退化为单选）                                                 |
+| 复选框角标     | 任意     | 任意                          | `onSelectionChange(toggle id)`；`event.stopPropagation()` 阻止冒泡到 motion.img；点击角标视为"明确的选择意图"，不论模式 |
+| 网格空白       | 任意     | 任意                          | 启动橡皮筋；onMouseUp 时 `onSelectionChange(交叠 ids)`                                                                  |
+| ESC（全局）    | —        | preview 开                    | 关预览                                                                                                                  |
+| ESC（全局）    | —        | preview 关 + selectedIds 非空 | `setSelectedIds([])`                                                                                                    |
 
 ---
 
@@ -163,15 +164,18 @@ main/index.ts:
 **移除：** Ant Design `Modal`、`Image`（`AntImage`）
 
 **新增：**
+
 - 导入 `motion` from `framer-motion`
 - `blobToPng` 工具函数
 - `handleClose` 函数（reset scale/rotation 后调 onClose）
 
 **Props 变化：**
+
 - 移除 `open` prop（由父级 `AnimatePresence` 的条件渲染控制）
 - 移除 `loading` prop（App.tsx 中从未实际传入）
 
 **State：**
+
 - `scale`（默认 1）、`rotation`（默认 0）保持不变
 - 新增 `useEffect(() => { setScale(1); setRotation(0); }, [image.id])`：切换图片时重置
 
@@ -228,7 +232,7 @@ const blobToPng = (blob: Blob): Promise<Blob> =>
       URL.revokeObjectURL(url);
       canvas.toBlob(
         (png) => (png ? resolve(png) : reject(new Error('toBlob failed'))),
-        'image/png'
+        'image/png',
       );
     };
     img.onerror = reject;
@@ -284,11 +288,13 @@ const handleClose = () => {
 ### 多选 + 批量删除交互
 
 **进入多选：**
+
 - Ctrl/Cmd+click 任意图片 → 加入选中
 - Shift+click → 范围选择
 - 网格空白拖拽 → 橡皮筋矩形 → 松开按交叠选中
 
 **多选模式下行为：**
+
 - 普通单击 = 切换该张选中
 - ESC = 清空 selectedIds 并退出多选
 - 复选框角标始终可见：选中蓝勾，未选半透明灰空框
@@ -347,8 +353,12 @@ deleteFilesPermanently(filePaths: string[]): Promise<{ deleted: number; failed: 
 ### IPC handlers (`main/index.ts`)
 
 ```ts
-ipcMain.handle('delete-images', async (_event, ids: number[]) => { /* ... */ })
-ipcMain.handle('delete-month-images', async (_event, yearMonth: string) => { /* ... */ })
+ipcMain.handle('delete-images', async (_event, ids: number[]) => {
+  /* ... */
+});
+ipcMain.handle('delete-month-images', async (_event, yearMonth: string) => {
+  /* ... */
+});
 ```
 
 两个 handler 均：先从 DB 取文件路径 → 永久删除文件 → 删除 DB 记录 → 返回结果。
@@ -385,33 +395,35 @@ export interface DeleteResult {
 
 ## 文件改动清单
 
-| 文件 | 类型 | 来源 | 合并改动 |
-|------|------|------|---------|
-| `package.json` | 修改 | A | + `framer-motion ^11.0.0` |
-| `src/renderer/App.tsx` | 修改 | A+B | `selectedImage`→`previewingImage` 改名；`AnimatePresence` 包 ImagePreview；`handleDeleteMonth`、`handleDeleteSelected`、ESC 优先级 handler |
-| `src/renderer/components/gallery/ImageViews.tsx` | 修改 | A+B | 透传 `previewingImageId` / `selectedIds` / `onSelectionChange` / `onPreview`；挂载 `<SelectionBar>` |
-| `src/renderer/components/gallery/PinterestGrid.tsx` | 修改 | A+B | `<motion.img>` + layoutId；鼠标事件路由器；橡皮筋；复选框角标；previewingImageId opacity 同步 |
-| `src/renderer/components/gallery/ImagePreview.tsx` | 重写 | A | Spec A 原样：去 Modal、blobToPng、motion.img、shared element |
-| `src/renderer/components/gallery/SelectionBar.tsx` | 新建 | B | 浮动底部操作栏 |
-| `src/renderer/components/filters/TopFilterBar.tsx` | 修改 | B | 月份 tag hover × 按钮 + `onDeleteMonth` 回调 |
-| `src/renderer/store/slices/imageSlice.ts` | 修改 | B | `removeImages` / `setSelectedIds` actions |
-| `src/renderer/hooks/useImageAPI.ts` | 修改 | B | `deleteImages` / `deleteMonthImages` |
-| `src/main/services/db-service.ts` | 修改 | B | `deleteImages` / `deleteImagesByMonth` |
-| `src/main/services/file-service.ts` | 修改 | B | `deleteFilesPermanently` |
-| `src/main/index.ts` | 修改 | B | 注册 `delete-images` / `delete-month-images` IPC |
-| `src/shared/types.ts` | 修改 | B | 新增 `DeleteResult` |
+| 文件                                                | 类型 | 来源 | 合并改动                                                                                                                                   |
+| --------------------------------------------------- | ---- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `package.json`                                      | 修改 | A    | + `framer-motion ^11.0.0`                                                                                                                  |
+| `src/renderer/App.tsx`                              | 修改 | A+B  | `selectedImage`→`previewingImage` 改名；`AnimatePresence` 包 ImagePreview；`handleDeleteMonth`、`handleDeleteSelected`、ESC 优先级 handler |
+| `src/renderer/components/gallery/ImageViews.tsx`    | 修改 | A+B  | 透传 `previewingImageId` / `selectedIds` / `onSelectionChange` / `onPreview`；挂载 `<SelectionBar>`                                        |
+| `src/renderer/components/gallery/PinterestGrid.tsx` | 修改 | A+B  | `<motion.img>` + layoutId；鼠标事件路由器；橡皮筋；复选框角标；previewingImageId opacity 同步                                              |
+| `src/renderer/components/gallery/ImagePreview.tsx`  | 重写 | A    | Spec A 原样：去 Modal、blobToPng、motion.img、shared element                                                                               |
+| `src/renderer/components/gallery/SelectionBar.tsx`  | 新建 | B    | 浮动底部操作栏                                                                                                                             |
+| `src/renderer/components/filters/TopFilterBar.tsx`  | 修改 | B    | 月份 tag hover × 按钮 + `onDeleteMonth` 回调                                                                                               |
+| `src/renderer/store/slices/imageSlice.ts`           | 修改 | B    | `removeImages` / `setSelectedIds` actions                                                                                                  |
+| `src/renderer/hooks/useImageAPI.ts`                 | 修改 | B    | `deleteImages` / `deleteMonthImages`                                                                                                       |
+| `src/main/services/db-service.ts`                   | 修改 | B    | `deleteImages` / `deleteImagesByMonth`                                                                                                     |
+| `src/main/services/file-service.ts`                 | 修改 | B    | `deleteFilesPermanently`                                                                                                                   |
+| `src/main/index.ts`                                 | 修改 | B    | 注册 `delete-images` / `delete-month-images` IPC                                                                                           |
+| `src/shared/types.ts`                               | 修改 | B    | 新增 `DeleteResult`                                                                                                                        |
 
 ---
 
 ## 实现任务序（依赖优先 → 上层叠加）
 
 ### Phase 0 — 基础设施（无用户可见变化）
+
 1. `npm i framer-motion@^11.0.0` + `package.json` 验证
 2. `src/shared/types.ts` 加 `DeleteResult`
 3. App.tsx 命名重构：`selectedImage` → `previewingImage`（仅改名，不动行为）
 4. `imageSlice.ts` 新增 `removeImages`、`setSelectedIds`
 
 ### Phase 1 — IPC 删除链路（无 UI，可单测）
+
 5. `db-service.ts`: `deleteImages(ids)`、`deleteImagesByMonth(yearMonth)`
 6. `file-service.ts`: `deleteFilesPermanently(filePaths)`
 7. `main/index.ts`: 注册 `delete-images`、`delete-month-images` handlers
@@ -419,6 +431,7 @@ export interface DeleteResult {
 9. ✅ 单测覆盖：db 和 file service 的删除路径（含失败项计数）
 
 ### Phase 2 — Apple Photos shared element + 复制 fix
+
 10. `PinterestGrid.tsx`: `<img>` → `<motion.img>` + `layoutId`，加 `previewingImageId` opacity:0 联动
 11. `App.tsx`: `<AnimatePresence onExitComplete>` 包 `ImagePreview`
 12. `ImagePreview.tsx`: 移除 Modal/AntImage，重写为 motion.div + motion.img；`handleClose` 重置 scale/rotation
@@ -426,22 +439,26 @@ export interface DeleteResult {
 14. ✅ 手测：动画从缩略图坐标展开/缩回；复制 JPEG/WebP 成功
 
 ### Phase 3 — 多选基础设施
+
 15. `PinterestGrid.tsx`: 鼠标事件路由器（落 motion.img → Ctrl/Shift/普通分支；落空白 → 启动橡皮筋）
 16. `PinterestGrid.tsx`: 复选框角标（始终可见，opacity 与 motion.img 共享）
 17. `PinterestGrid.tsx`: 橡皮筋矩形 div + 交叠检测（`getBoundingClientRect` + 滚动偏移）
 18. `App.tsx` ESC handler 优先级（修改 App.tsx 内 `useKeyboardShortcuts` 的 `escape` 处理器，当前在 App.tsx:85）：preview → selection → 无操作
 
 ### Phase 4 — SelectionBar + 批量删除入口
+
 19. 新建 `SelectionBar.tsx`
 20. `ImageViews.tsx`: `selectedIds.length > 0` 时挂载 SelectionBar
 21. `App.tsx`: `handleDeleteSelected` — Modal.confirm → IPC → dispatch `removeImages`
 22. `App.tsx`: 若 `previewingImage.id ∈ deletedIds` → 先 `setPreviewVisible(false)`
 
 ### Phase 5 — 月份删除
+
 23. `TopFilterBar.tsx`: 月份 tag hover × 按钮（CSS opacity transition）
 24. `App.tsx`: `handleDeleteMonth` — Modal.confirm → IPC → reloadMonths → 若当前月被删则切换"全部"
 
 ### Phase 6 — 联调与回归
+
 25. 全量手测矩阵
 26. `npm run lint` / `npm run test:unit` / `npm run build` 全部通过
 
@@ -450,6 +467,7 @@ export interface DeleteResult {
 ## 测试矩阵
 
 ### 单功能（继承自两份 spec）
+
 - [ ] 单击缩略图：动画从缩略图坐标展开到全屏
 - [ ] ESC / 点击遮罩：动画缩回到原坐标
 - [ ] 切换图片后再打开：动画从新坐标出发
@@ -466,6 +484,7 @@ export interface DeleteResult {
 - [ ] 删除已选 → DB 行消失 → 文件物理删除
 
 ### 新交叉场景（合并独有）
+
 - [ ] 多选模式下单击图片 → 切换选中，**不**触发预览动画
 - [ ] 多选模式下按 ESC → 清空 selectedIds（**不**关闭预览，因为预览未开）
 - [ ] 预览打开 + 多选已激活 → ESC 关预览（保留 selectedIds）→ 再 ESC 清空 selectedIds
@@ -491,6 +510,7 @@ export interface DeleteResult {
 ## 替代/废弃文档
 
 本文档合并并取代以下两份独立设计：
+
 - `2026-05-10-apple-photos-zoom-copy-fix-design.md`
 - `2026-05-10-delete-and-box-select-design.md`
 

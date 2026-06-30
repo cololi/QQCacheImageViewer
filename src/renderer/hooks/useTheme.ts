@@ -38,7 +38,7 @@ export function useTheme(): UseThemeReturn {
       savePreference({
         key: 'theme',
         value: newTheme,
-      })
+      }),
     );
   };
 

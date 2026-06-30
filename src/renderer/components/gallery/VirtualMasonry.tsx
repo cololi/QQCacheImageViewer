@@ -54,17 +54,30 @@ function findScrollAncestor(el: HTMLElement | null): HTMLElement | Window {
 }
 
 /** Read scrollTop/clientHeight from either an HTMLElement or the window. */
+function readWindowScroll(root: HTMLElement | null) {
+  // For window scrolling, the masonry's offsetTop tells us how far down
+  // it sits, so visible range is computed relative to root.
+  const rootTop = root ? root.getBoundingClientRect().top + window.scrollY : 0;
+  return {
+    scrollTop: window.scrollY - rootTop,
+    viewportHeight: window.innerHeight,
+  };
+}
+
+function canScroll(el: HTMLElement) {
+  return el.scrollHeight > el.clientHeight + 1;
+}
+
 function readScroll(target: HTMLElement | Window, root: HTMLElement | null) {
-  if (target === window) {
-    // For window scrolling, the masonry's offsetTop tells us how far down
-    // it sits, so visible range is computed relative to root.
-    const rootTop = root ? root.getBoundingClientRect().top + window.scrollY : 0;
-    return {
-      scrollTop: window.scrollY - rootTop,
-      viewportHeight: window.innerHeight,
-    };
-  }
+  if (target === window) return readWindowScroll(root);
+
   const el = target as HTMLElement;
+
+  // Some layouts mark an ancestor as `overflow: auto` but let the document
+  // body do the actual scrolling. In that case listening to the ancestor keeps
+  // the virtual range pinned near the top, so use the window metrics instead.
+  if (!canScroll(el)) return readWindowScroll(root);
+
   const rootRect = root?.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
   // root.top relative to scroll container's content area
@@ -134,10 +147,15 @@ export const VirtualMasonry: React.FC<VirtualMasonryProps> = ({
     setScrollState(readScroll(target, rootRef.current));
 
     const passive = { passive: true } as AddEventListenerOptions;
-    target.addEventListener('scroll', onScroll, passive);
+    const scrollTargets = target === window ? [window] : [target, window];
+    scrollTargets.forEach((scrollTarget) =>
+      scrollTarget.addEventListener('scroll', onScroll, passive),
+    );
+    window.addEventListener('resize', onScroll, passive);
     return () => {
       if (frame) cancelAnimationFrame(frame);
-      target.removeEventListener('scroll', onScroll);
+      scrollTargets.forEach((scrollTarget) => scrollTarget.removeEventListener('scroll', onScroll));
+      window.removeEventListener('resize', onScroll);
     };
   }, []);
 
@@ -179,6 +197,14 @@ export const VirtualMasonry: React.FC<VirtualMasonryProps> = ({
     // Subtract the trailing gap we added past the last item in each col
     return { positions: out, totalHeight: Math.max(0, total - gap) };
   }, [itemCount, itemKey, itemAspect, columnCount, containerWidth, gap]);
+
+  // Total height changes can turn a declared overflow ancestor into a real
+  // scroll container (or reveal that the window is the actual scroller).
+  useLayoutEffect(() => {
+    const target = scrollAncestorRef.current;
+    if (!target) return;
+    setScrollState(readScroll(target, rootRef.current));
+  }, [totalHeight]);
 
   // Notify subscriber whenever positions change (rubber-band uses these).
   useEffect(() => {

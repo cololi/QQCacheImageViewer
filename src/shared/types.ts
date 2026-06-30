@@ -46,12 +46,23 @@ export interface ScanResult {
   message: string;
 }
 
-export type SortField = 'name' | 'size' | 'width' | 'height' | 'pixels' | 'ratio' | 'mtime';
+export type SortField =
+  | 'name'
+  | 'size'
+  | 'width'
+  | 'height'
+  | 'pixels'
+  | 'ratio'
+  | 'mtime'
+  | 'file_time'
+  | 'file_size';
 export type SortOrder = 'asc' | 'desc';
 
 export interface QueryParams {
   yearMonth?: string;
   format?: string;
+  formats?: string[];
+  categories?: string[];
   sizeRange?: [number, number];
   ratioRange?: [number, number];
   sortField?: SortField;

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, protocol, net } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { initializeDatabase, closeDatabase } from './services/db-service';
@@ -31,6 +32,38 @@ function initializePathGuard(): void {
 
 let mainWindow: BrowserWindow | null = null;
 
+function showMainWindow(): void {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.center();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function getRendererUrl(): string {
+  if (app.isPackaged) {
+    return pathToFileURL(path.join(__dirname, '../../renderer/index.html')).toString();
+  }
+
+  if (process.env.ELECTRON_START_URL) {
+    return process.env.ELECTRON_START_URL;
+  }
+
+  const distRenderer = path.join(__dirname, '../../renderer/index.html');
+  if (fs.existsSync(distRenderer)) {
+    return pathToFileURL(distRenderer).toString();
+  }
+
+  const buildRenderer = path.join(app.getAppPath(), 'build/index.html');
+  if (fs.existsSync(buildRenderer)) {
+    return pathToFileURL(buildRenderer).toString();
+  }
+
+  return 'http://127.0.0.1:3001';
+}
+
 const createWindow = () => {
   console.log('Creating main window...');
   mainWindow = new BrowserWindow({
@@ -38,6 +71,7 @@ const createWindow = () => {
     height: 800,
     minWidth: 1000,
     minHeight: 600,
+    show: false,
     titleBarStyle: 'hidden',
     titleBarOverlay: {
       color: '#00000000',
@@ -51,9 +85,7 @@ const createWindow = () => {
     },
   });
 
-  const startUrl = !app.isPackaged
-    ? 'http://127.0.0.1:3001'
-    : `file://${path.join(__dirname, '../../renderer/index.html')}`;
+  const startUrl = getRendererUrl();
 
   console.log(`Loading URL: ${startUrl}`);
   mainWindow.loadURL(startUrl);
@@ -64,15 +96,17 @@ const createWindow = () => {
 
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('Window content loaded');
+    showMainWindow();
   });
 
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('Failed to load:', errorCode, errorDescription);
+    mainWindow?.show();
   });
 
   mainWindow.on('ready-to-show', () => {
     console.log('Window ready to show');
-    mainWindow?.show();
+    showMainWindow();
   });
 
   mainWindow.on('closed', () => {

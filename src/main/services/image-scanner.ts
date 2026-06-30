@@ -19,12 +19,46 @@ const access = promisify(fs.access);
 const SHARP_CONCURRENCY = 4;
 const FILE_BATCH_SIZE = 8;
 
-// 动态导入 p-limit (ESM 模块)
-let sharpLimit: ReturnType<typeof import('p-limit').default>;
-const initPLimit = async () => {
+const sharpRuntime = sharp as typeof sharp & {
+  concurrency?: (concurrency?: number) => number;
+  cache?: (options?: { memory?: number; files?: number; items?: number }) => unknown;
+};
+
+sharpRuntime.concurrency?.(SHARP_CONCURRENCY);
+sharpRuntime.cache?.({ memory: 32, files: 0, items: 128 });
+
+type Task<T> = () => Promise<T>;
+type Limit = <T>(task: Task<T>) => Promise<T>;
+type ImageBatchHandler = (images: ImageMetadata[]) => Promise<void> | void;
+
+function createLimit(concurrency: number): Limit {
+  let activeCount = 0;
+  const queue: Array<() => void> = [];
+
+  const next = () => {
+    activeCount--;
+    queue.shift()?.();
+  };
+
+  return <T>(task: Task<T>) =>
+    new Promise<T>((resolve, reject) => {
+      const run = () => {
+        activeCount++;
+        task().then(resolve, reject).finally(next);
+      };
+
+      if (activeCount < concurrency) {
+        run();
+      } else {
+        queue.push(run);
+      }
+    });
+}
+
+let sharpLimit: Limit | null = null;
+const getSharpLimit = (): Limit => {
   if (!sharpLimit) {
-    const pLimit = (await import('p-limit')).default;
-    sharpLimit = pLimit(SHARP_CONCURRENCY);
+    sharpLimit = createLimit(SHARP_CONCURRENCY);
   }
   return sharpLimit;
 };
@@ -156,7 +190,7 @@ export const validateDirectory = async (dirPath: string): Promise<boolean> => {
 export const getImageDimensions = async (
   filePath: string,
 ): Promise<{ width?: number; height?: number }> => {
-  const limit = await initPLimit();
+  const limit = getSharpLimit();
   return limit(async () => {
     try {
       const metadata = await sharp(filePath).metadata();
@@ -261,10 +295,12 @@ export const scanMonthDirectory = async (
   yearMonth: string,
   onProgress?: (processed: number, total: number) => void,
   existingHashes?: Set<string>,
+  onImages?: ImageBatchHandler,
 ): Promise<ImageMetadata[]> => {
   const images: ImageMetadata[] = [];
   const monthPath = path.join(basePath, yearMonth);
   const oriPath = path.join(monthPath, 'Ori');
+  let batchHandlerError: unknown;
 
   try {
     // 异步检查目录是否存在
@@ -280,19 +316,28 @@ export const scanMonthDirectory = async (
 
     // 批量并发处理文件
     for (let i = 0; i < files.length; i += FILE_BATCH_SIZE) {
+      if (scanAborted) break;
+
       const batch = files.slice(i, Math.min(i + FILE_BATCH_SIZE, files.length));
 
       const results = await Promise.all(
         batch.map((file) => processFile(file, basePath, yearMonth, oriPath, existingHashes)),
       );
 
-      // 收集成功处理的图片
-      for (const result of results) {
-        if (result) {
-          images.push(result);
+      const validImages = results.filter((result): result is ImageMetadata => result !== null);
+      if (validImages.length > 0) {
+        if (onImages) {
+          try {
+            await onImages(validImages);
+          } catch (error) {
+            batchHandlerError = error;
+            throw error;
+          }
+        } else {
+          images.push(...validImages);
         }
-        processed++;
       }
+      processed += batch.length;
 
       // 报告进度
       if (onProgress) {
@@ -302,6 +347,9 @@ export const scanMonthDirectory = async (
 
     return images;
   } catch (error) {
+    if (batchHandlerError === error) {
+      throw error;
+    }
     console.error(`Failed to scan month directory ${yearMonth}:`, error);
     return images;
   }
@@ -360,6 +408,7 @@ export const scanQQCacheDirectory = async (
   basePathOrPaths: string | string[],
   _options: ScanOptions = {},
   onProgress?: (month: string, processed: number, total: number, percent: number) => void,
+  onImages?: ImageBatchHandler,
 ): Promise<ImageMetadata[]> => {
   const allImages: ImageMetadata[] = [];
   const basePaths = Array.isArray(basePathOrPaths) ? basePathOrPaths : [basePathOrPaths];
@@ -392,31 +441,41 @@ export const scanQQCacheDirectory = async (
     // 2. Scan each task. Progress is coarse per-month: basePercent from completed
     //    tasks + the current task's fractional share. Total file count is unknown
     //    up front (would require pre-listing every Ori dir), so we don't report it.
-    let totalScanned = 0;
+    let processedFilesBeforeTask = 0;
     let currentTaskIndex = 0;
 
     for (const task of tasks) {
-      // Cooperative cancellation between tasks — fine-grained per-file
-      // cancellation is intentionally out of scope; per-month is sufficient
-      // to make window-close terminate scanning promptly.
       if (scanAborted) {
         console.log('Scan aborted; stopping after task index', currentTaskIndex);
         break;
       }
       try {
-        const images = await scanMonthDirectory(task.basePath, task.month, (processed, total) => {
-          const basePercent = (currentTaskIndex / tasks.length) * 100;
-          const taskPercent = (processed / total) * (100 / tasks.length);
-          const totalPercent = Math.min(100, Math.round(basePercent + taskPercent));
-          if (onProgress) {
-            onProgress(task.month, totalScanned + processed, 0, totalPercent);
-          }
-        });
+        let processedInTask = 0;
+        const images = await scanMonthDirectory(
+          task.basePath,
+          task.month,
+          (processed, total) => {
+            processedInTask = processed;
+            const basePercent = (currentTaskIndex / tasks.length) * 100;
+            const taskPercent = (processed / total) * (100 / tasks.length);
+            const totalPercent = Math.min(100, Math.round(basePercent + taskPercent));
+            if (onProgress) {
+              onProgress(task.month, processedFilesBeforeTask + processed, 0, totalPercent);
+            }
+          },
+          undefined,
+          onImages,
+        );
 
-        allImages.push(...images);
-        totalScanned += images.length;
+        if (!onImages) {
+          allImages.push(...images);
+        }
+        processedFilesBeforeTask += processedInTask;
         currentTaskIndex++;
       } catch (error) {
+        if (onImages) {
+          throw error;
+        }
         console.error(`Error scanning month ${task.month} in ${task.basePath}:`, error);
         currentTaskIndex++; // Still advance task index
         continue;

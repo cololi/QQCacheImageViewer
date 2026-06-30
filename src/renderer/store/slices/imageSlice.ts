@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Image } from '../../../shared/types';
+import { Image, SortField, SortOrder } from '../../../shared/types';
 
 export interface ImageState {
   images: Image[];
@@ -7,8 +7,8 @@ export interface ImageState {
   error: string | null;
   currentMonth: string | null;
   selectedIds: number[];
-  sortField: string;
-  sortOrder: 'asc' | 'desc';
+  sortField: SortField;
+  sortOrder: SortOrder;
   totalCount: number;
 }
 
@@ -49,10 +49,10 @@ const imageSlice = createSlice({
         state.selectedIds.push(action.payload);
       }
     },
-    setSortField: (state, action: PayloadAction<string>) => {
+    setSortField: (state, action: PayloadAction<SortField>) => {
       state.sortField = action.payload;
     },
-    setSortOrder: (state, action: PayloadAction<'asc' | 'desc'>) => {
+    setSortOrder: (state, action: PayloadAction<SortOrder>) => {
       state.sortOrder = action.payload;
     },
     setTotalCount: (state, action: PayloadAction<number>) => {

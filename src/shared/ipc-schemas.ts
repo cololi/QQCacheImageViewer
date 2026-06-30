@@ -28,6 +28,8 @@ export const ScanImagesInput = z
 export const GetImagesInput = z.object({
   yearMonth: z.string().optional(),
   format: z.string().optional(),
+  formats: z.array(z.string()).optional(),
+  categories: z.array(z.string()).optional(),
   sizeRange: NumberRange.optional(),
   ratioRange: NumberRange.optional(),
   sortField: z.string().optional(),

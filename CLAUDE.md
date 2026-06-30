@@ -26,6 +26,7 @@ npm run lint:fix
 ```
 
 Run a single test file:
+
 ```bash
 npx jest src/main/services/__tests__/db-service.test.ts
 ```
@@ -35,6 +36,7 @@ npx jest src/main/services/__tests__/db-service.test.ts
 This is an **Electron 28 + React 18** desktop app. The process boundary is strict:
 
 **Main process** (`src/main/`) — Node.js, compiled via `tsc -p src/main/tsconfig.json` → `dist/main/`:
+
 - `index.ts` — App entry, registers all IPC handlers, registers `local-resource://` protocol for serving local image files to the renderer
 - `services/image-scanner.ts` — Detects QQ cache paths under Windows `Documents` and scans directories, extracting image metadata
 - `services/db-service.ts` — SQLite via `better-sqlite3`; stores image records (hash, path, dimensions, month, size)
@@ -43,6 +45,7 @@ This is an **Electron 28 + React 18** desktop app. The process boundary is stric
 - `services/settings-service.ts` — `electron-store` persistence for user preferences
 
 **Renderer process** (`src/renderer/`) — React, compiled via `react-scripts` → `dist/renderer/`:
+
 - `App.tsx` — Root; wires Redux store, i18n, theme, and top-level layout
 - `components/gallery/` — `PinterestGrid.tsx` (masonry layout), `ImageViews.tsx`, `ImagePreview.tsx` (fullscreen modal)
 - `components/filters/` — `FilterPanel.tsx`, `TopFilterBar.tsx`

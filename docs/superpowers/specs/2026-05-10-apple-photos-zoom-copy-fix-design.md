@@ -58,6 +58,7 @@ framer-motion ^11.0.0
 ### 2. `src/renderer/App.tsx`
 
 **改动：**
+
 - 导入 `AnimatePresence` from `framer-motion`
 - 将 `<ImagePreview>` 的条件渲染移至 `AnimatePresence` 内，由 `previewVisible` 控制挂载/卸载（取代 `open` prop）
 - `AnimatePresence` 加 `onExitComplete={() => setSelectedImage(null)}`：关闭动画播完后才清空 `selectedImage`，避免缩略图在动画结束前提前恢复显示
@@ -66,10 +67,7 @@ framer-motion ^11.0.0
 ```tsx
 <AnimatePresence onExitComplete={() => setSelectedImage(null)}>
   {previewVisible && selectedImage && (
-    <ImagePreview
-      image={selectedImage}
-      onClose={() => setPreviewVisible(false)}
-    />
+    <ImagePreview image={selectedImage} onClose={() => setPreviewVisible(false)} />
   )}
 </AnimatePresence>
 ```
@@ -79,6 +77,7 @@ framer-motion ^11.0.0
 ### 3. `src/renderer/components/gallery/ImageViews.tsx`
 
 **改动：**
+
 - props 新增 `selectedImageId?: number | null`
 - 透传给 `PinterestGrid`
 
@@ -87,6 +86,7 @@ framer-motion ^11.0.0
 ### 4. `src/renderer/components/gallery/PinterestGrid.tsx`
 
 **改动：**
+
 - props 新增 `selectedImageId?: number | null`
 - 导入 `motion` from `framer-motion`
 - 将 `<img>` 改为 `<motion.img>`：
@@ -102,18 +102,22 @@ framer-motion ^11.0.0
 这是改动最大的文件。
 
 **移除：**
+
 - Ant Design `Modal`、`Image`（`AntImage`）组件
 
 **新增：**
+
 - 导入 `motion` from `framer-motion`
 - `blobToPng` 工具函数
 - `handleClose` 函数（reset scale/rotation 后调 onClose）
 
 **Props 变化：**
+
 - 移除 `open` prop（由父级 `AnimatePresence` 的条件渲染控制）
 - 移除 `loading` prop（App.tsx 中从未实际传入，新实现不保留）
 
 **State：**
+
 - `scale`（默认 1）、`rotation`（默认 0）保持不变
 - 新增 `useEffect(() => { setScale(1); setRotation(0); }, [image.id])`：切换图片时重置
 
@@ -170,7 +174,7 @@ const blobToPng = (blob: Blob): Promise<Blob> =>
       URL.revokeObjectURL(url);
       canvas.toBlob(
         (png) => (png ? resolve(png) : reject(new Error('toBlob failed'))),
-        'image/png'
+        'image/png',
       );
     };
     img.onerror = reject;
@@ -204,16 +208,16 @@ const handleClose = () => {
 
 ## 动画时序
 
-| 阶段 | 内容 |
-|------|------|
-| 打开：缩略图 | `opacity: 1→0`（瞬间） |
-| 打开：遮罩 | `opacity: 0→1`（0.2s） |
-| 打开：图片 | layout spring 从缩略图坐标→全屏（~0.4s） |
-| 打开：工具栏 | `opacity+y`（0.2s，延迟 0.1s） |
-| 打开：元数据 | `opacity+x`（0.2s，延迟 0.1s） |
-| 关闭：图片 | layout spring 从全屏→缩略图坐标（~0.4s） |
-| 关闭：遮罩/工具栏/元数据 | `exit` 动画（0.2s） |
-| 关闭完成 | `onExitComplete` → `selectedImage=null` → 缩略图 `opacity: 0→1` |
+| 阶段                     | 内容                                                            |
+| ------------------------ | --------------------------------------------------------------- |
+| 打开：缩略图             | `opacity: 1→0`（瞬间）                                          |
+| 打开：遮罩               | `opacity: 0→1`（0.2s）                                          |
+| 打开：图片               | layout spring 从缩略图坐标→全屏（~0.4s）                        |
+| 打开：工具栏             | `opacity+y`（0.2s，延迟 0.1s）                                  |
+| 打开：元数据             | `opacity+x`（0.2s，延迟 0.1s）                                  |
+| 关闭：图片               | layout spring 从全屏→缩略图坐标（~0.4s）                        |
+| 关闭：遮罩/工具栏/元数据 | `exit` 动画（0.2s）                                             |
+| 关闭完成                 | `onExitComplete` → `selectedImage=null` → 缩略图 `opacity: 0→1` |
 
 ---
 

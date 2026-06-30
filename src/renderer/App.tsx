@@ -21,11 +21,12 @@ import { ImagePreview } from './components/gallery/ImagePreview';
 import { TopFilterBar } from './components/filters/TopFilterBar';
 import { SettingsModal } from './components/settings/SettingsModal';
 
-import { Image } from '../shared/types';
+import { Image, QueryParams } from '../shared/types';
 import { useTheme } from './hooks/useTheme';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const { Content, Footer } = Layout;
+const PAGE_SIZE = 200;
 
 interface ScanProgress {
   currentMonth: string;
@@ -60,9 +61,39 @@ const AppContent: React.FC = () => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const { message: messageApi } = AntdApp.useApp();
 
-  const PAGE_SIZE = 200;
   const hasMoreRef = useRef(true);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasActiveFilters =
+    filters.selectedFormats.length > 0 ||
+    filters.selectedCategories.length > 0 ||
+    filters.sizeRange[0] !== 0 ||
+    Number.isFinite(filters.sizeRange[1]) ||
+    filters.ratioRange[0] > 0 ||
+    Number.isFinite(filters.ratioRange[1]);
+
+  const queryFilters = useMemo(() => {
+    const activeSizeRange =
+      filters.sizeRange[0] !== 0 || Number.isFinite(filters.sizeRange[1])
+        ? filters.sizeRange
+        : undefined;
+    const activeRatioRange =
+      filters.ratioRange[0] > 0 || Number.isFinite(filters.ratioRange[1])
+        ? filters.ratioRange
+        : undefined;
+
+    return {
+      formats: filters.selectedFormats.length > 0 ? filters.selectedFormats : undefined,
+      categories: filters.selectedCategories.length > 0 ? filters.selectedCategories : undefined,
+      sizeRange: activeSizeRange,
+      ratioRange: activeRatioRange,
+      sortField,
+      sortOrder,
+    } satisfies Pick<
+      QueryParams,
+      'formats' | 'categories' | 'sizeRange' | 'ratioRange' | 'sortField' | 'sortOrder'
+    >;
+  }, [filters, sortField, sortOrder]);
+  const querySignature = useMemo(() => JSON.stringify(queryFilters), [queryFilters]);
 
   // Set up listener for scan progress
   useEffect(() => {
@@ -151,6 +182,7 @@ const AppContent: React.FC = () => {
         const offset = currentImages.length;
         const imageList = await getImages({
           yearMonth,
+          ...queryFilters,
           offset,
           limit: PAGE_SIZE,
         });
@@ -165,7 +197,7 @@ const AppContent: React.FC = () => {
         console.error('加载图片失败:', error);
       }
     },
-    [getImages, dispatch],
+    [getImages, queryFilters, dispatch],
   );
 
   const loadingRef = useRef(false);
@@ -206,88 +238,13 @@ const AppContent: React.FC = () => {
     const effectiveMonth = yearMonth === '' ? null : yearMonth;
     dispatch(setCurrentMonth(effectiveMonth));
     hasMoreRef.current = true;
-    dispatch(setLoading(true));
-    try {
-      await loadImages(yearMonth, false);
-    } catch (error) {
-      messageApi.error('加载图片失败');
-      console.error(error);
-    } finally {
-      dispatch(setLoading(false));
-    }
   };
 
-  // Filter and sort images
-  const filteredImages = useMemo(() => {
-    let result = [...images];
-
-    // Format filter
-    if (filters.selectedFormats.length > 0) {
-      result = result.filter((img) => filters.selectedFormats.includes(img.format.toLowerCase()));
-    }
-
-    // Size range filter
-    result = result.filter(
-      (img) => img.fileSize >= filters.sizeRange[0] && img.fileSize <= filters.sizeRange[1],
-    );
-
-    // Ratio range filter
-    if (filters.ratioRange[0] > 0 || filters.ratioRange[1] < Infinity) {
-      result = result.filter(
-        (img) =>
-          img.ratio && img.ratio >= filters.ratioRange[0] && img.ratio <= filters.ratioRange[1],
-      );
-    }
-
-    // Category filter
-    if (filters.selectedCategories.length > 0) {
-      result = result.filter((img) => {
-        for (const category of filters.selectedCategories) {
-          if (category === 'portrait' && img.ratio && img.ratio < 0.8) return true;
-          if (category === 'landscape' && img.ratio && img.ratio > 1.25) return true;
-          if (category === 'square' && img.ratio && img.ratio >= 0.8 && img.ratio <= 1.25)
-            return true;
-        }
-        return false;
-      });
-    }
-
-    // Sorting
-    result.sort((a, b) => {
-      let compareValue = 0;
-
-      switch (sortField) {
-        case 'file_time':
-          compareValue =
-            (a.fileTime ? new Date(a.fileTime).getTime() : 0) -
-            (b.fileTime ? new Date(b.fileTime).getTime() : 0);
-          break;
-        case 'size':
-          compareValue = a.fileSize - b.fileSize;
-          break;
-        case 'width':
-          compareValue = (a.width || 0) - (b.width || 0);
-          break;
-        case 'height':
-          compareValue = (a.height || 0) - (b.height || 0);
-          break;
-        case 'pixels':
-          compareValue = (a.width || 0) * (a.height || 0) - (b.width || 0) * (b.height || 0);
-          break;
-        case 'ratio':
-          compareValue = (a.ratio || 0) - (b.ratio || 0);
-          break;
-        case 'name':
-        default:
-          compareValue = a.hash.localeCompare(b.hash);
-          break;
-      }
-
-      return sortOrder === 'asc' ? compareValue : -compareValue;
-    });
-
-    return result;
-  }, [images, filters, sortField, sortOrder]);
+  useEffect(() => {
+    hasMoreRef.current = true;
+    dispatch(setLoading(true));
+    loadImages(currentMonth || '', false).finally(() => dispatch(setLoading(false)));
+  }, [currentMonth, querySignature, loadImages, dispatch]);
 
   const handleDeleteSelected = () => {
     const ids = [...selectedIds];
@@ -384,17 +341,17 @@ const AppContent: React.FC = () => {
         <Content style={{ padding: '24px', overflow: 'auto', flex: 1 }}>
           <div style={{ marginBottom: '16px' }}>
             <h2 style={{ margin: 0 }}>
-              {filteredImages.length > 0
-                ? `共 ${filteredImages.length} 张图片 (总计 ${images.length})`
-                : images.length > 0
+              {images.length > 0
+                ? `已加载 ${images.length} 张图片`
+                : hasActiveFilters
                   ? '未找到匹配的图片'
                   : '请选择月份或扫描目录'}
             </h2>
           </div>
 
-          {filteredImages.length > 0 && (
+          {images.length > 0 && (
             <ImageViews
-              images={filteredImages}
+              images={images}
               onImageSelect={(image) => {
                 setPreviewingImage(image);
                 setPreviewVisible(true);

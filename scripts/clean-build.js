@@ -3,7 +3,7 @@ const path = require('path');
 
 const dirsToClean = ['dist', 'build'];
 
-dirsToClean.forEach(dir => {
+dirsToClean.forEach((dir) => {
   const dirPath = path.join(__dirname, '..', dir);
   if (fs.existsSync(dirPath)) {
     try {

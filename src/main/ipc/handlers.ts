@@ -17,7 +17,7 @@ import path from 'path';
 import { IPC } from '../../shared/ipc-channels';
 import * as schemas from '../../shared/ipc-schemas';
 import { AppSettings, UserPreferences } from '../../shared/settings-types';
-import { Image } from '../../shared/types';
+import { Image, ImageMetadata } from '../../shared/types';
 
 import { registerHandler, registerRawHandler } from './registry';
 
@@ -56,6 +56,7 @@ import {
 import { addAllowedRoot } from '../utils/path-guard';
 
 const DEFAULT_PAGE_SIZE = 200;
+const SCAN_SAVE_BATCH_SIZE = 500;
 
 /**
  * Register all 21 invocable IPC handlers.
@@ -86,7 +87,19 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
 
     console.log('Scanning paths:', scanPaths);
 
-    const images = await scanQQCacheDirectory(
+    let scannedImages = 0;
+    let pendingImages: ImageMetadata[] = [];
+    const flushPendingImages = async () => {
+      if (pendingImages.length === 0) return;
+      const batch = pendingImages;
+      pendingImages = [];
+      const saved = await saveImages(batch);
+      if (!saved) {
+        throw new Error('保存扫描结果失败');
+      }
+    };
+
+    await scanQQCacheDirectory(
       scanPaths,
       input ?? {},
       (month, processed, total, percent) => {
@@ -99,14 +112,21 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
           percent: Math.round(percent),
         });
       },
+      async (images) => {
+        scannedImages += images.length;
+        pendingImages.push(...images);
+        if (pendingImages.length >= SCAN_SAVE_BATCH_SIZE) {
+          await flushPendingImages();
+        }
+      },
     );
 
-    await saveImages(images);
+    await flushPendingImages();
 
     return {
       success: true,
-      totalImages: images.length,
-      message: `成功扫描 ${images.length} 张图片`,
+      totalImages: scannedImages,
+      message: `成功扫描 ${scannedImages} 张图片`,
     };
   });
 
@@ -120,6 +140,8 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
     return getImages({
       yearMonth: params.yearMonth,
       format: params.format,
+      formats: params.formats,
+      categories: params.categories,
       sizeRange: params.sizeRange,
       ratioRange: params.ratioRange,
       // SortField is loosely typed at the schema layer; db-service has its own whitelist.

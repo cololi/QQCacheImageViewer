@@ -41,7 +41,7 @@ const blobToPng = (blob: Blob): Promise<Blob> =>
       URL.revokeObjectURL(url);
       canvas.toBlob(
         (png) => (png ? resolve(png) : reject(new Error('toBlob failed'))),
-        'image/png'
+        'image/png',
       );
     };
     img.onerror = () => {
@@ -153,7 +153,11 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onClose }) =>
                 <Button icon={<ZoomInOutlined />} onClick={handleZoomIn} disabled={scale >= 5} />
               </Tooltip>
               <Tooltip title="缩小 (Ctrl+- / 滚轮下)">
-                <Button icon={<ZoomOutOutlined />} onClick={handleZoomOut} disabled={scale <= 0.1} />
+                <Button
+                  icon={<ZoomOutOutlined />}
+                  onClick={handleZoomOut}
+                  disabled={scale <= 0.1}
+                />
               </Tooltip>
               <Tooltip title={`缩放: ${scale.toFixed(1)}x`}>
                 <span style={{ minWidth: '60px', textAlign: 'center' }}>{scale.toFixed(1)}x</span>

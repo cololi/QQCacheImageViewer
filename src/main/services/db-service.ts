@@ -34,6 +34,24 @@ function safeOrderBy(field: string | undefined, order: string | undefined): stri
   return ` ORDER BY ${col} ${dir}`;
 }
 
+function addRangeClause(
+  column: string,
+  range: [number, number] | undefined,
+  queryParts: string[],
+  sqlParams: (string | number)[],
+): void {
+  if (!range) return;
+  const [min, max] = range;
+  if (Number.isFinite(min) && min > 0) {
+    queryParts.push(` AND ${column} >= ?`);
+    sqlParams.push(min);
+  }
+  if (Number.isFinite(max)) {
+    queryParts.push(` AND ${column} <= ?`);
+    sqlParams.push(max);
+  }
+}
+
 /**
  * Defensive bounds for paginated queries.
  * Renderer-supplied limit/offset values are untrusted; clamp to safe ranges
@@ -68,9 +86,9 @@ export const initializeDatabase = () => {
 
     db.pragma('foreign_keys = ON');
     db.pragma('journal_mode = WAL');
-    db.pragma('cache_size = -64000');
-    db.pragma('mmap_size = 268435456');
-    db.pragma('temp_store = MEMORY');
+    db.pragma('cache_size = -16000');
+    db.pragma('mmap_size = 67108864');
+    db.pragma('temp_store = FILE');
     db.pragma('synchronous = NORMAL');
 
     db.exec(`
@@ -188,32 +206,42 @@ export const getImages = (params: QueryParams): Image[] => {
   if (!db) return [];
 
   try {
-    let query = 'SELECT * FROM images WHERE 1=1';
+    const queryParts = ['SELECT * FROM images WHERE 1=1'];
     const sqlParams: (string | number)[] = [];
 
     if (params.yearMonth) {
-      query += ' AND file_time_month = ?';
+      queryParts.push(' AND file_time_month = ?');
       sqlParams.push(params.yearMonth);
     }
 
-    if (params.format) {
-      query += ' AND format = ?';
-      sqlParams.push(params.format);
+    const formats = params.formats?.length ? params.formats : params.format ? [params.format] : [];
+    if (formats.length > 0) {
+      const placeholders = formats.map(() => '?').join(',');
+      queryParts.push(` AND format IN (${placeholders})`);
+      sqlParams.push(...formats.map((format) => format.toLowerCase()));
     }
 
-    if (params.sizeRange) {
-      query += ' AND file_size BETWEEN ? AND ?';
-      sqlParams.push(params.sizeRange[0], params.sizeRange[1]);
+    addRangeClause('file_size', params.sizeRange, queryParts, sqlParams);
+    addRangeClause('ratio', params.ratioRange, queryParts, sqlParams);
+
+    const categoryClauses: string[] = [];
+    for (const category of params.categories ?? []) {
+      if (category === 'portrait') categoryClauses.push('ratio < 0.8');
+      if (category === 'landscape') categoryClauses.push('ratio > 1.25');
+      if (category === 'square') categoryClauses.push('(ratio >= 0.8 AND ratio <= 1.25)');
+    }
+    if (categoryClauses.length > 0) {
+      queryParts.push(` AND (${categoryClauses.join(' OR ')})`);
     }
 
     // Add sorting (whitelist field, fixed direction — prevents SQL injection)
-    query += safeOrderBy(params.sortField, params.sortOrder);
+    queryParts.push(safeOrderBy(params.sortField, params.sortOrder));
 
     // Always apply pagination — clamped values are guaranteed safe and positive
-    query += ' LIMIT ? OFFSET ?';
+    queryParts.push(' LIMIT ? OFFSET ?');
     sqlParams.push(clampLimit(params.limit), clampOffset(params.offset));
 
-    const stmt = db.prepare(query);
+    const stmt = db.prepare(queryParts.join(''));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const results = stmt.all(...sqlParams) as any[];
 

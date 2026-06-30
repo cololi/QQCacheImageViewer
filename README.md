@@ -19,7 +19,7 @@
 ## 系统要求
 
 - Windows 10 / 11
-- Node.js 18+（开发时需要）
+- Node.js 20（开发或从源码构建时需要，版本见 `.node-version`）
 
 ## 安装
 
@@ -29,11 +29,13 @@
 
 ### 从源码构建
 
+请先安装 Node.js 20，然后在项目根目录执行：
+
 ```bash
 git clone https://github.com/Cololi/QQCacheImageViewer.git
 cd QQCacheImageViewer
-npm install
-npm run dist        # 打包为安装程序（NSIS）
+npm ci
+npm run dist           # 打包为安装程序（NSIS）
 npm run dist:portable  # 打包为便携版
 ```
 
@@ -42,6 +44,7 @@ npm run dist:portable  # 打包为便携版
 ## 开发
 
 ```bash
+npm install          # 安装或更新开发依赖
 npm run dev          # 启动开发模式（热重载）
 npm test             # 运行测试
 npm run lint         # 代码检查
@@ -50,25 +53,25 @@ npm run lint:fix     # 自动修复
 
 ## 快捷键
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+F` | 搜索 |
-| `Ctrl+A` | 全选 |
+| 快捷键   | 功能     |
+| -------- | -------- |
+| `Ctrl+F` | 搜索     |
+| `Ctrl+A` | 全选     |
 | `Delete` | 删除选中 |
-| `Ctrl+C` | 复制 |
-| `Space` | 全屏预览 |
+| `Ctrl+C` | 复制     |
+| `Space`  | 全屏预览 |
 
 ## 技术栈
 
-| 类别 | 技术 |
-|------|------|
-| 框架 | Electron 28 + React 18 |
-| 语言 | TypeScript 5 |
-| UI 库 | Ant Design 5 |
-| 状态管理 | Redux Toolkit |
-| 数据库 | SQLite (better-sqlite3) |
-| 图片处理 | Sharp |
-| 样式 | Tailwind CSS |
+| 类别     | 技术                    |
+| -------- | ----------------------- |
+| 框架     | Electron 28 + React 18  |
+| 语言     | TypeScript 5            |
+| UI 库    | Ant Design 5            |
+| 状态管理 | Redux Toolkit           |
+| 数据库   | SQLite (better-sqlite3) |
+| 图片处理 | Sharp                   |
+| 样式     | Tailwind CSS            |
 
 ## 项目结构
 

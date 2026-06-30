@@ -17,6 +17,7 @@
 ### Task 1: 添加 framer-motion 依赖
 
 **Files:**
+
 - Modify: `package.json:45-59` (dependencies block)
 
 - [ ] **Step 1: 编辑 package.json，将 framer-motion 加入 dependencies**
@@ -58,6 +59,7 @@ git commit -m "chore: add framer-motion ^11.0.0 dependency"
 ### Task 2: 在 shared/types.ts 添加 DeleteResult 类型
 
 **Files:**
+
 - Modify: `src/shared/types.ts` (append at end)
 
 - [ ] **Step 1: 在 types.ts 末尾追加 DeleteResult 接口**
@@ -65,7 +67,6 @@ git commit -m "chore: add framer-motion ^11.0.0 dependency"
 文件当前末尾在第 61 行 `}`（QueryParams 闭合）。追加：
 
 ```typescript
-
 export interface DeleteResult {
   success: boolean;
   deleted: number;
@@ -90,6 +91,7 @@ git commit -m "feat(types): add DeleteResult shared type"
 ### Task 3: 在 imageSlice 添加 setSelectedIds 和 removeImages action
 
 **Files:**
+
 - Modify: `src/renderer/store/slices/imageSlice.ts:29-65` (reducers + exports)
 
 注意：`selectedIds`、`toggleImageSelection`、`clearSelection` 已存在；本任务**新增** `setSelectedIds`（整体替换，用于框选结果写入）和 `removeImages`（删除时过滤 images 与 selectedIds）。
@@ -136,6 +138,7 @@ git commit -m "feat(state): add setSelectedIds and removeImages actions"
 ### Task 4: App.tsx 命名重构 selectedImage → previewingImage
 
 **Files:**
+
 - Modify: `src/renderer/App.tsx:45,271,282` (state declaration + setter calls + ImagePreview prop)
 
 仅做机械重命名，不改行为。
@@ -143,7 +146,7 @@ git commit -m "feat(state): add setSelectedIds and removeImages actions"
 - [ ] **Step 1: 改第 45 行的 state 声明**
 
 ```tsx
-  const [previewingImage, setPreviewingImage] = useState<Image | null>(null);
+const [previewingImage, setPreviewingImage] = useState<Image | null>(null);
 ```
 
 - [ ] **Step 2: 改第 271 行的 onImageSelect 回调**
@@ -158,11 +161,11 @@ git commit -m "feat(state): add setSelectedIds and removeImages actions"
 - [ ] **Step 3: 改第 282 行 ImagePreview 的 image prop**
 
 ```tsx
-      <ImagePreview
-        image={previewingImage}
-        open={previewVisible}
-        onClose={() => setPreviewVisible(false)}
-      />
+<ImagePreview
+  image={previewingImage}
+  open={previewVisible}
+  onClose={() => setPreviewVisible(false)}
+/>
 ```
 
 - [ ] **Step 4: 验证 build 通过**
@@ -184,6 +187,7 @@ git commit -m "refactor(app): rename selectedImage to previewingImage to disambi
 ### Task 5: 为 deleteImages 写失败测试
 
 **Files:**
+
 - Create: `src/main/services/__tests__/db-service.delete.test.ts`
 
 注意：原 `db-service.test.ts` 存在 pre-existing TypeScript 编译错误（fileName / minSize / queryImages({}) 等历史 API 漂移），整个 suite 无法加载。本次新功能的测试单独放进 `db-service.delete.test.ts`，避免与历史失效代码耦合。
@@ -230,10 +234,9 @@ describe('Database Service — delete operations', () => {
 
     beforeEach(() => {
       mockSelectStmt = {
-        all: jest.fn().mockReturnValue([
-          { file_path: '/path/a.jpg' },
-          { file_path: '/path/b.png' },
-        ]),
+        all: jest
+          .fn()
+          .mockReturnValue([{ file_path: '/path/a.jpg' }, { file_path: '/path/b.png' }]),
       };
       mockDeleteStmt = { run: jest.fn() };
       mockPrepareImpl = jest.fn((sql: string) => {
@@ -283,6 +286,7 @@ Expected: FAIL — `dbService.deleteImages is not a function`
 ### Task 6: 实现 deleteImages
 
 **Files:**
+
 - Modify: `src/main/services/db-service.ts` (append before `closeDatabase`)
 
 - [ ] **Step 1: 在 `clearOldCache` 之后、`optimizeDatabase` 之前插入新函数**
@@ -297,15 +301,11 @@ export const deleteImages = (ids: number[]): { filePaths: string[] } => {
 
   try {
     const placeholders = ids.map(() => '?').join(',');
-    const selectStmt = db.prepare(
-      `SELECT file_path FROM images WHERE id IN (${placeholders})`
-    );
+    const selectStmt = db.prepare(`SELECT file_path FROM images WHERE id IN (${placeholders})`);
     const rows = selectStmt.all(...ids) as Array<{ file_path: string }>;
     const filePaths = rows.map((r) => r.file_path);
 
-    const deleteStmt = db.prepare(
-      `DELETE FROM images WHERE id IN (${placeholders})`
-    );
+    const deleteStmt = db.prepare(`DELETE FROM images WHERE id IN (${placeholders})`);
     deleteStmt.run(...ids);
 
     return { filePaths };
@@ -333,6 +333,7 @@ git commit -m "feat(db): add deleteImages with file path return"
 ### Task 7: 为 deleteImagesByMonth 写失败测试
 
 **Files:**
+
 - Modify: `src/main/services/__tests__/db-service.delete.test.ts` (insert new describe before outer close)
 
 - [ ] **Step 1: 用 Edit 在 deleteImages describe 之后、外层 `});` 之前插入新 describe**
@@ -415,6 +416,7 @@ Expected: FAIL — `dbService.deleteImagesByMonth is not a function`
 ### Task 8: 实现 deleteImagesByMonth
 
 **Files:**
+
 - Modify: `src/main/services/db-service.ts` (append after `deleteImages`)
 
 - [ ] **Step 1: 在 `deleteImages` 之后追加**
@@ -429,14 +431,12 @@ export const deleteImagesByMonth = (yearMonth: string): { filePaths: string[] } 
 
   try {
     const selectStmt = db.prepare(
-      "SELECT file_path FROM images WHERE strftime('%Y-%m', file_time) = ?"
+      "SELECT file_path FROM images WHERE strftime('%Y-%m', file_time) = ?",
     );
     const rows = selectStmt.all(yearMonth) as Array<{ file_path: string }>;
     const filePaths = rows.map((r) => r.file_path);
 
-    const deleteStmt = db.prepare(
-      "DELETE FROM images WHERE strftime('%Y-%m', file_time) = ?"
-    );
+    const deleteStmt = db.prepare("DELETE FROM images WHERE strftime('%Y-%m', file_time) = ?");
     deleteStmt.run(yearMonth);
 
     return { filePaths };
@@ -464,6 +464,7 @@ git commit -m "feat(db): add deleteImagesByMonth using strftime filter"
 ### Task 9: 为 deleteFilesPermanently 写失败测试
 
 **Files:**
+
 - Create: `src/main/services/__tests__/file-service.test.ts`
 
 - [ ] **Step 1: 创建测试文件**
@@ -520,6 +521,7 @@ Expected: FAIL — `fileService.deleteFilesPermanently is not a function`
 ### Task 10: 实现 deleteFilesPermanently
 
 **Files:**
+
 - Modify: `src/main/services/file-service.ts` (append after `deleteToRecycleBin`)
 
 - [ ] **Step 1: 在 `deleteToRecycleBin` 之后追加**
@@ -530,7 +532,7 @@ Expected: FAIL — `fileService.deleteFilesPermanently is not a function`
  * Counts failures rather than throwing — caller can decide to surface them.
  */
 export async function deleteFilesPermanently(
-  filePaths: string[]
+  filePaths: string[],
 ): Promise<{ deleted: number; failed: number }> {
   let deleted = 0;
   let failed = 0;
@@ -566,12 +568,22 @@ git commit -m "feat(file): add deleteFilesPermanently with failure counting"
 ### Task 11: 注册 IPC handlers
 
 **Files:**
+
 - Modify: `src/main/index.ts:3,5-14,148-150` (imports + new handlers)
 
 - [ ] **Step 1: 更新 db-service import（line 3）**
 
 ```typescript
-import { initializeDatabase, getMonths, getImages, saveImages, getImageCount, getExistingHashes, deleteImages, deleteImagesByMonth } from './services/db-service';
+import {
+  initializeDatabase,
+  getMonths,
+  getImages,
+  saveImages,
+  getImageCount,
+  getExistingHashes,
+  deleteImages,
+  deleteImagesByMonth,
+} from './services/db-service';
 ```
 
 - [ ] **Step 2: 更新 file-service import（line 5-14）**
@@ -641,6 +653,7 @@ git commit -m "feat(ipc): register delete-images and delete-month-images handler
 ### Task 12: 在 useImageAPI hook 中添加 deleteImages / deleteMonthImages
 
 **Files:**
+
 - Modify: `src/renderer/hooks/useImageAPI.ts:21-27` (returned object)
 
 - [ ] **Step 1: 在 `getImageCount` 之后添加两个新 callback**
@@ -648,26 +661,32 @@ git commit -m "feat(ipc): register delete-images and delete-month-images handler
 在 `getImageCount` 的 `}, []);` 之后插入：
 
 ```typescript
-  const deleteImages = useCallback(async (ids: number[]): Promise<{ success: boolean; deleted: number; failed: number }> => {
+const deleteImages = useCallback(
+  async (ids: number[]): Promise<{ success: boolean; deleted: number; failed: number }> => {
     return window.electron?.ipcRenderer.invoke('delete-images', ids);
-  }, []);
+  },
+  [],
+);
 
-  const deleteMonthImages = useCallback(async (yearMonth: string): Promise<{ success: boolean; deleted: number; failed: number }> => {
+const deleteMonthImages = useCallback(
+  async (yearMonth: string): Promise<{ success: boolean; deleted: number; failed: number }> => {
     return window.electron?.ipcRenderer.invoke('delete-month-images', yearMonth);
-  }, []);
+  },
+  [],
+);
 ```
 
 - [ ] **Step 2: 在 return 块（line 21-26）追加两个 export**
 
 ```typescript
-  return {
-    scanImages,
-    getMonths,
-    getImages,
-    getImageCount,
-    deleteImages,
-    deleteMonthImages,
-  };
+return {
+  scanImages,
+  getMonths,
+  getImages,
+  getImageCount,
+  deleteImages,
+  deleteMonthImages,
+};
 ```
 
 - [ ] **Step 3: 验证 build**
@@ -689,6 +708,7 @@ git commit -m "feat(hooks): expose deleteImages and deleteMonthImages IPC"
 ### Task 13: 在 PinterestGrid 中将 img 改为 motion.img + layoutId
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/PinterestGrid.tsx:1-10,67-91` (imports + props + thumbnail)
 
 注意：本任务只引入 motion.img 与 layoutId，不引入选择/复选框。新增 `previewingImageId` prop，用于动画期间隐藏对应缩略图。
@@ -708,9 +728,9 @@ import { getImageUrl } from '../../utils/imageUtils';
 
 ```tsx
 interface PinterestGridProps {
-    images: Image[];
-    onImageSelect?: (image: Image) => void;
-    previewingImageId?: number | null;
+  images: Image[];
+  onImageSelect?: (image: Image) => void;
+  previewingImageId?: number | null;
 }
 ```
 
@@ -728,34 +748,36 @@ export const PinterestGrid: React.FC<PinterestGridProps & { columnCount?: number
 - [ ] **Step 4: 修改卡片渲染（line 67-91）—— 包裹 div 加 opacity 联动，img 换成 motion.img**
 
 ```tsx
-                {images.map((image) => (
-                    <div
-                        key={image.id}
-                        className="group relative mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-lg bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
-                        style={{ opacity: previewingImageId === image.id ? 0 : 1 }}
-                        onClick={() => onImageSelect?.(image)}
-                    >
-                        <motion.img
-                            layoutId={`img-${image.id}`}
-                            src={getImageUrl(image)}
-                            alt=""
-                            className="block h-auto w-full object-cover"
-                            loading="lazy"
-                            style={{ borderRadius: '8px' }}
-                        />
-                        <div className="absolute bottom-2 right-2 z-10 scale-90 opacity-0 bg-white/90 shadow-sm transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 hover:!scale-110 hover:!bg-white rounded-full">
-                            <Tooltip title="快速保存">
-                                <Button
-                                    type="text"
-                                    shape="circle"
-                                    icon={<DownloadOutlined />}
-                                    size="small"
-                                    onClick={(e) => handleDownload(e, image)}
-                                />
-                            </Tooltip>
-                        </div>
-                    </div>
-                ))}
+{
+  images.map((image) => (
+    <div
+      key={image.id}
+      className="group relative mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-lg bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+      style={{ opacity: previewingImageId === image.id ? 0 : 1 }}
+      onClick={() => onImageSelect?.(image)}
+    >
+      <motion.img
+        layoutId={`img-${image.id}`}
+        src={getImageUrl(image)}
+        alt=""
+        className="block h-auto w-full object-cover"
+        loading="lazy"
+        style={{ borderRadius: '8px' }}
+      />
+      <div className="absolute bottom-2 right-2 z-10 scale-90 opacity-0 bg-white/90 shadow-sm transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 hover:!scale-110 hover:!bg-white rounded-full">
+        <Tooltip title="快速保存">
+          <Button
+            type="text"
+            shape="circle"
+            icon={<DownloadOutlined />}
+            size="small"
+            onClick={(e) => handleDownload(e, image)}
+          />
+        </Tooltip>
+      </div>
+    </div>
+  ));
+}
 ```
 
 - [ ] **Step 5: 验证 build**
@@ -775,6 +797,7 @@ git commit -m "feat(grid): convert thumbnail img to motion.img with layoutId"
 ### Task 14: 在 ImageViews 透传 previewingImageId
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/ImageViews.tsx:7-39`
 
 - [ ] **Step 1: 更新 props 接口与 destructure（line 7-22）**
@@ -803,12 +826,12 @@ export const ImageViews: React.FC<ImageViewsProps> = ({
 - [ ] **Step 2: 透传给 PinterestGrid（line 34）**
 
 ```tsx
-          <PinterestGrid
-            images={images}
-            onImageSelect={onImageSelect}
-            columnCount={columnCount}
-            previewingImageId={previewingImageId}
-          />
+<PinterestGrid
+  images={images}
+  onImageSelect={onImageSelect}
+  columnCount={columnCount}
+  previewingImageId={previewingImageId}
+/>
 ```
 
 - [ ] **Step 3: 验证 build**
@@ -828,6 +851,7 @@ git commit -m "feat(views): forward previewingImageId to PinterestGrid"
 ### Task 15: 在 App.tsx 用 AnimatePresence 包裹 ImagePreview
 
 **Files:**
+
 - Modify: `src/renderer/App.tsx:1-3,267-285` (imports + ImageViews wiring + ImagePreview wrapper)
 
 - [ ] **Step 1: 在 imports 顶部加 AnimatePresence（line 1 之后）**
@@ -841,32 +865,33 @@ import { AnimatePresence } from 'framer-motion';
 - [ ] **Step 2: 在 ImageViews 调用上加 previewingImageId 透传（line 267-275）**
 
 ```tsx
-          {filteredImages.length > 0 && (
-            <ImageViews
-              images={filteredImages}
-              loading={loading}
-              onImageSelect={(image) => {
-                setPreviewingImage(image);
-                setPreviewVisible(true);
-              }}
-              columnCount={columnCount}
-              previewingImageId={previewingImage?.id ?? null}
-            />
-          )}
+{
+  filteredImages.length > 0 && (
+    <ImageViews
+      images={filteredImages}
+      loading={loading}
+      onImageSelect={(image) => {
+        setPreviewingImage(image);
+        setPreviewVisible(true);
+      }}
+      columnCount={columnCount}
+      previewingImageId={previewingImage?.id ?? null}
+    />
+  );
+}
 ```
 
 - [ ] **Step 3: 用 AnimatePresence 替换原 ImagePreview 调用（line 281-285）**
 
 ```tsx
-      {/* Image Preview with Apple Photos shared-element transition */}
-      <AnimatePresence onExitComplete={() => setPreviewingImage(null)}>
-        {previewVisible && previewingImage && (
-          <ImagePreview
-            image={previewingImage}
-            onClose={() => setPreviewVisible(false)}
-          />
-        )}
-      </AnimatePresence>
+{
+  /* Image Preview with Apple Photos shared-element transition */
+}
+<AnimatePresence onExitComplete={() => setPreviewingImage(null)}>
+  {previewVisible && previewingImage && (
+    <ImagePreview image={previewingImage} onClose={() => setPreviewVisible(false)} />
+  )}
+</AnimatePresence>;
 ```
 
 注意：移除了 `open` prop（由条件渲染控制），ImagePreview 的接口将在下个任务里调整。
@@ -880,6 +905,7 @@ import { AnimatePresence } from 'framer-motion';
 ### Task 16: 重写 ImagePreview 为 motion.div + motion.img（移除 Modal）
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/ImagePreview.tsx` (完整重写组件结构，保留 metadata 面板内容)
 
 - [ ] **Step 1: 完整替换文件内容**
@@ -928,7 +954,7 @@ const blobToPng = (blob: Blob): Promise<Blob> =>
       URL.revokeObjectURL(url);
       canvas.toBlob(
         (png) => (png ? resolve(png) : reject(new Error('toBlob failed'))),
-        'image/png'
+        'image/png',
       );
     };
     img.onerror = () => {
@@ -1040,7 +1066,11 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onClose }) =>
                 <Button icon={<ZoomInOutlined />} onClick={handleZoomIn} disabled={scale >= 5} />
               </Tooltip>
               <Tooltip title="缩小 (Ctrl+- / 滚轮下)">
-                <Button icon={<ZoomOutOutlined />} onClick={handleZoomOut} disabled={scale <= 0.1} />
+                <Button
+                  icon={<ZoomOutOutlined />}
+                  onClick={handleZoomOut}
+                  disabled={scale <= 0.1}
+                />
               </Tooltip>
               <Tooltip title={`缩放: ${scale.toFixed(1)}x`}>
                 <span style={{ minWidth: '60px', textAlign: 'center' }}>{scale.toFixed(1)}x</span>
@@ -1158,6 +1188,7 @@ git commit -m "feat(preview): rewrite ImagePreview with shared-element transitio
 
 Run: `npm run dev`
 Manual checks:
+
 - 点击缩略图：图片从缩略图坐标 spring 展开到全屏；缩略图位置变空（opacity:0）
 - ESC / 点遮罩 / 工具栏外其它点击：图片缩回原坐标，缩略图恢复
 - 切换月份后再点图：动画从新缩略图坐标出发
@@ -1172,17 +1203,18 @@ Manual checks:
 ### Task 17: 在 PinterestGrid 添加 selectedIds prop 与点击路由
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/PinterestGrid.tsx` (props + handler)
 
 - [ ] **Step 1: 更新 props 接口（在已修改后的位置）**
 
 ```tsx
 interface PinterestGridProps {
-    images: Image[];
-    onImageSelect?: (image: Image) => void;
-    previewingImageId?: number | null;
-    selectedIds: number[];
-    onSelectionChange: (ids: number[]) => void;
+  images: Image[];
+  onImageSelect?: (image: Image) => void;
+  previewingImageId?: number | null;
+  selectedIds: number[];
+  onSelectionChange: (ids: number[]) => void;
 }
 ```
 
@@ -1202,69 +1234,69 @@ export const PinterestGrid: React.FC<PinterestGridProps & { columnCount?: number
 - [ ] **Step 3: 在 `containerRef` 之后追加 lastSelectedId ref + 清空联动**
 
 ```tsx
-    const lastSelectedIdRef = useRef<number | null>(null);
+const lastSelectedIdRef = useRef<number | null>(null);
 
-    // Spec: lastSelectedId resets to null when selectedIds is cleared.
-    // Otherwise Shift+click after a clear would draw a range from a stale anchor.
-    useEffect(() => {
-        if (selectedIds.length === 0) {
-            lastSelectedIdRef.current = null;
-        }
-    }, [selectedIds]);
+// Spec: lastSelectedId resets to null when selectedIds is cleared.
+// Otherwise Shift+click after a clear would draw a range from a stale anchor.
+useEffect(() => {
+  if (selectedIds.length === 0) {
+    lastSelectedIdRef.current = null;
+  }
+}, [selectedIds]);
 ```
 
 - [ ] **Step 4: 在 `handleDownload` 之前添加 click 路由**
 
 ```tsx
-    const isSelectionMode = selectedIds.length > 0;
+const isSelectionMode = selectedIds.length > 0;
 
-    const toggleId = (id: number) => {
-        const set = new Set(selectedIds);
-        if (set.has(id)) set.delete(id);
-        else set.add(id);
-        onSelectionChange(Array.from(set));
-    };
+const toggleId = (id: number) => {
+  const set = new Set(selectedIds);
+  if (set.has(id)) set.delete(id);
+  else set.add(id);
+  onSelectionChange(Array.from(set));
+};
 
-    const rangeSelect = (toId: number) => {
-        const fromId = lastSelectedIdRef.current;
-        if (fromId == null) {
-            onSelectionChange([toId]);
-            lastSelectedIdRef.current = toId;
-            return;
-        }
-        const fromIdx = images.findIndex((img) => img.id === fromId);
-        const toIdx = images.findIndex((img) => img.id === toId);
-        if (fromIdx === -1 || toIdx === -1) {
-            onSelectionChange([toId]);
-            lastSelectedIdRef.current = toId;
-            return;
-        }
-        const [lo, hi] = fromIdx <= toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
-        const rangeIds = images.slice(lo, hi + 1).map((img) => img.id);
-        const merged = new Set([...selectedIds, ...rangeIds]);
-        onSelectionChange(Array.from(merged));
-    };
+const rangeSelect = (toId: number) => {
+  const fromId = lastSelectedIdRef.current;
+  if (fromId == null) {
+    onSelectionChange([toId]);
+    lastSelectedIdRef.current = toId;
+    return;
+  }
+  const fromIdx = images.findIndex((img) => img.id === fromId);
+  const toIdx = images.findIndex((img) => img.id === toId);
+  if (fromIdx === -1 || toIdx === -1) {
+    onSelectionChange([toId]);
+    lastSelectedIdRef.current = toId;
+    return;
+  }
+  const [lo, hi] = fromIdx <= toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+  const rangeIds = images.slice(lo, hi + 1).map((img) => img.id);
+  const merged = new Set([...selectedIds, ...rangeIds]);
+  onSelectionChange(Array.from(merged));
+};
 
-    const handleCardClick = (e: React.MouseEvent, image: Image) => {
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            toggleId(image.id);
-            lastSelectedIdRef.current = image.id;
-            return;
-        }
-        if (e.shiftKey) {
-            e.preventDefault();
-            rangeSelect(image.id);
-            lastSelectedIdRef.current = image.id;
-            return;
-        }
-        if (isSelectionMode) {
-            toggleId(image.id);
-            lastSelectedIdRef.current = image.id;
-            return;
-        }
-        onImageSelect?.(image);
-    };
+const handleCardClick = (e: React.MouseEvent, image: Image) => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    toggleId(image.id);
+    lastSelectedIdRef.current = image.id;
+    return;
+  }
+  if (e.shiftKey) {
+    e.preventDefault();
+    rangeSelect(image.id);
+    lastSelectedIdRef.current = image.id;
+    return;
+  }
+  if (isSelectionMode) {
+    toggleId(image.id);
+    lastSelectedIdRef.current = image.id;
+    return;
+  }
+  onImageSelect?.(image);
+};
 ```
 
 - [ ] **Step 5: 把卡片 onClick 替换为 handleCardClick**
@@ -1285,6 +1317,7 @@ export const PinterestGrid: React.FC<PinterestGridProps & { columnCount?: number
 ### Task 18: 在 ImageViews 透传 selectedIds / onSelectionChange
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/ImageViews.tsx`
 
 - [ ] **Step 1: 更新 props 接口**
@@ -1318,14 +1351,14 @@ export const ImageViews: React.FC<ImageViewsProps> = ({
 - [ ] **Step 3: 把新 props 透传给 PinterestGrid**
 
 ```tsx
-          <PinterestGrid
-            images={images}
-            onImageSelect={onImageSelect}
-            columnCount={columnCount}
-            previewingImageId={previewingImageId}
-            selectedIds={selectedIds}
-            onSelectionChange={onSelectionChange}
-          />
+<PinterestGrid
+  images={images}
+  onImageSelect={onImageSelect}
+  columnCount={columnCount}
+  previewingImageId={previewingImageId}
+  selectedIds={selectedIds}
+  onSelectionChange={onSelectionChange}
+/>
 ```
 
 - [ ] **Step 4: 暂不 build，下个任务把 App.tsx 接上**
@@ -1335,35 +1368,45 @@ export const ImageViews: React.FC<ImageViewsProps> = ({
 ### Task 19: 在 App.tsx 把 selectedIds Redux 接到 ImageViews
 
 **Files:**
+
 - Modify: `src/renderer/App.tsx:7,38,267-276`
 
 - [ ] **Step 1: 在 imageSlice import（line 7）追加 setSelectedIds**
 
 ```tsx
-import { setImages, setLoading, setCurrentMonth, setSortField, setSortOrder, setSelectedIds } from './store/slices/imageSlice';
+import {
+  setImages,
+  setLoading,
+  setCurrentMonth,
+  setSortField,
+  setSortOrder,
+  setSelectedIds,
+} from './store/slices/imageSlice';
 ```
 
 - [ ] **Step 2: 在 useSelector（line 38）追加 selectedIds 解构**
 
 ```tsx
-  const { images, loading, sortField, sortOrder, currentMonth, selectedIds } = useSelector((state: RootState) => state.images);
+const { images, loading, sortField, sortOrder, currentMonth, selectedIds } = useSelector(
+  (state: RootState) => state.images,
+);
 ```
 
 - [ ] **Step 3: 把 selectedIds / onSelectionChange 传给 ImageViews**
 
 ```tsx
-            <ImageViews
-              images={filteredImages}
-              loading={loading}
-              onImageSelect={(image) => {
-                setPreviewingImage(image);
-                setPreviewVisible(true);
-              }}
-              columnCount={columnCount}
-              previewingImageId={previewingImage?.id ?? null}
-              selectedIds={selectedIds}
-              onSelectionChange={(ids) => dispatch(setSelectedIds(ids))}
-            />
+<ImageViews
+  images={filteredImages}
+  loading={loading}
+  onImageSelect={(image) => {
+    setPreviewingImage(image);
+    setPreviewVisible(true);
+  }}
+  columnCount={columnCount}
+  previewingImageId={previewingImage?.id ?? null}
+  selectedIds={selectedIds}
+  onSelectionChange={(ids) => dispatch(setSelectedIds(ids))}
+/>
 ```
 
 - [ ] **Step 4: 验证 build**
@@ -1383,6 +1426,7 @@ git commit -m "feat(grid): wire selection state with Ctrl/Shift/normal click rou
 ### Task 20: 在 PinterestGrid 添加复选框角标（始终可见）
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/PinterestGrid.tsx` (卡片内部插入)
 
 - [ ] **Step 1: 在 motion.img 之后、download button 之前插入复选框 div**
@@ -1434,74 +1478,82 @@ git commit -m "feat(grid): add always-visible checkbox corner overlay"
 ### Task 21: 在 PinterestGrid 添加橡皮筋框选
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/PinterestGrid.tsx`
 
 - [ ] **Step 1: 在 lastSelectedIdRef 之后追加状态**
 
 ```tsx
-    const [rubberBand, setRubberBand] = useState<{
-        startX: number;
-        startY: number;
-        endX: number;
-        endY: number;
-    } | null>(null);
-    const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+const [rubberBand, setRubberBand] = useState<{
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+} | null>(null);
+const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 ```
 
 - [ ] **Step 2: 在 handleCardClick 之后添加橡皮筋 handler**
 
 ```tsx
-    const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.button !== 0) return; // 仅左键
-        const target = e.target as HTMLElement;
-        // 仅在网格空白起手；命中 motion.img / 复选框 / button 时跳过（由卡片 onClick 处理）
-        if (target.closest('img,button,[data-checkbox]')) return;
+const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  if (e.button !== 0) return; // 仅左键
+  const target = e.target as HTMLElement;
+  // 仅在网格空白起手；命中 motion.img / 复选框 / button 时跳过（由卡片 onClick 处理）
+  if (target.closest('img,button,[data-checkbox]')) return;
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        const startX = e.clientX - rect.left + e.currentTarget.scrollLeft;
-        const startY = e.clientY - rect.top + e.currentTarget.scrollTop;
-        setRubberBand({ startX, startY, endX: startX, endY: startY });
-    };
+  const rect = e.currentTarget.getBoundingClientRect();
+  const startX = e.clientX - rect.left + e.currentTarget.scrollLeft;
+  const startY = e.clientY - rect.top + e.currentTarget.scrollTop;
+  setRubberBand({ startX, startY, endX: startX, endY: startY });
+};
 
-    const handleContainerMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!rubberBand) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const endX = e.clientX - rect.left + e.currentTarget.scrollLeft;
-        const endY = e.clientY - rect.top + e.currentTarget.scrollTop;
-        setRubberBand({ ...rubberBand, endX, endY });
-    };
+const handleContainerMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  if (!rubberBand) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const endX = e.clientX - rect.left + e.currentTarget.scrollLeft;
+  const endY = e.clientY - rect.top + e.currentTarget.scrollTop;
+  setRubberBand({ ...rubberBand, endX, endY });
+};
 
-    const handleContainerMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!rubberBand) return;
-        const containerRect = e.currentTarget.getBoundingClientRect();
-        const scrollTop = e.currentTarget.scrollTop;
-        const scrollLeft = e.currentTarget.scrollLeft;
+const handleContainerMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+  if (!rubberBand) return;
+  const containerRect = e.currentTarget.getBoundingClientRect();
+  const scrollTop = e.currentTarget.scrollTop;
+  const scrollLeft = e.currentTarget.scrollLeft;
 
-        const minX = Math.min(rubberBand.startX, rubberBand.endX);
-        const maxX = Math.max(rubberBand.startX, rubberBand.endX);
-        const minY = Math.min(rubberBand.startY, rubberBand.endY);
-        const maxY = Math.max(rubberBand.startY, rubberBand.endY);
+  const minX = Math.min(rubberBand.startX, rubberBand.endX);
+  const maxX = Math.max(rubberBand.startX, rubberBand.endX);
+  const minY = Math.min(rubberBand.startY, rubberBand.endY);
+  const maxY = Math.max(rubberBand.startY, rubberBand.endY);
 
-        const hitIds: number[] = [];
-        itemRefs.current.forEach((el, id) => {
-            const r = el.getBoundingClientRect();
-            const itemLeft = r.left - containerRect.left + scrollLeft;
-            const itemTop = r.top - containerRect.top + scrollTop;
-            const itemRight = itemLeft + r.width;
-            const itemBottom = itemTop + r.height;
-            const intersects = !(itemRight < minX || itemLeft > maxX || itemBottom < minY || itemTop > maxY);
-            if (intersects) hitIds.push(id);
-        });
+  const hitIds: number[] = [];
+  itemRefs.current.forEach((el, id) => {
+    const r = el.getBoundingClientRect();
+    const itemLeft = r.left - containerRect.left + scrollLeft;
+    const itemTop = r.top - containerRect.top + scrollTop;
+    const itemRight = itemLeft + r.width;
+    const itemBottom = itemTop + r.height;
+    const intersects = !(
+      itemRight < minX ||
+      itemLeft > maxX ||
+      itemBottom < minY ||
+      itemTop > maxY
+    );
+    if (intersects) hitIds.push(id);
+  });
 
-        // 仅在矩形拖出"明显"区域时才视为框选；< 5px 视为单击，留给 onClick
-        const dragged = Math.abs(rubberBand.endX - rubberBand.startX) > 5 || Math.abs(rubberBand.endY - rubberBand.startY) > 5;
-        if (dragged) {
-            // 追加（保留已选），按 Shift 时同样追加；不区分以简化模型
-            const merged = new Set([...selectedIds, ...hitIds]);
-            onSelectionChange(Array.from(merged));
-        }
-        setRubberBand(null);
-    };
+  // 仅在矩形拖出"明显"区域时才视为框选；< 5px 视为单击，留给 onClick
+  const dragged =
+    Math.abs(rubberBand.endX - rubberBand.startX) > 5 ||
+    Math.abs(rubberBand.endY - rubberBand.startY) > 5;
+  if (dragged) {
+    // 追加（保留已选），按 Shift 时同样追加；不区分以简化模型
+    const merged = new Set([...selectedIds, ...hitIds]);
+    onSelectionChange(Array.from(merged));
+  }
+  setRubberBand(null);
+};
 ```
 
 - [ ] **Step 3: 在 container div 上挂载事件 + 渲染矩形**
@@ -1562,6 +1614,7 @@ git commit -m "feat(grid): add always-visible checkbox corner overlay"
 Run: `npm run build:react` → Compiled successfully
 
 Run: `npm run dev`：
+
 - 在网格空白处按住左键拖拽 → 蓝色半透明矩形出现 → 松开 → 与矩形相交的图都被选中（角标变蓝勾）
 - 在缩略图上按住拖拽 → 不应启动矩形（仍触发卡片 onClick）
 
@@ -1579,6 +1632,7 @@ git commit -m "feat(grid): add rubber-band rectangle selection"
 ### Task 22: 创建 SelectionBar 组件
 
 **Files:**
+
 - Create: `src/renderer/components/gallery/SelectionBar.tsx`
 
 - [ ] **Step 1: 创建文件**
@@ -1664,6 +1718,7 @@ git commit -m "feat(selection): add floating SelectionBar component"
 ### Task 23: 在 ImageViews 挂载 SelectionBar
 
 **Files:**
+
 - Modify: `src/renderer/components/gallery/ImageViews.tsx`
 
 - [ ] **Step 1: import SelectionBar**
@@ -1707,37 +1762,37 @@ export const ImageViews: React.FC<ImageViewsProps> = ({
 把 return 的最外层结构改为：
 
 ```tsx
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-auto">
-        {loading ? (
-          <div className="flex h-full items-center justify-center">
-            <Spin size="large" />
-          </div>
-        ) : images.length === 0 ? (
-          <Empty description="暂无图片" />
-        ) : (
-          <PinterestGrid
-            images={images}
-            onImageSelect={onImageSelect}
-            columnCount={columnCount}
-            previewingImageId={previewingImageId}
-            selectedIds={selectedIds}
-            onSelectionChange={onSelectionChange}
-          />
-        )}
-      </div>
-      {selectedIds.length > 0 && (
-        <SelectionBar
-          selectedCount={selectedIds.length}
-          totalCount={images.length}
-          onSelectAll={() => onSelectionChange(images.map((img) => img.id))}
-          onDelete={onDeleteSelected}
-          onClear={() => onSelectionChange([])}
+return (
+  <div className="flex h-full flex-col">
+    <div className="flex-1 overflow-auto">
+      {loading ? (
+        <div className="flex h-full items-center justify-center">
+          <Spin size="large" />
+        </div>
+      ) : images.length === 0 ? (
+        <Empty description="暂无图片" />
+      ) : (
+        <PinterestGrid
+          images={images}
+          onImageSelect={onImageSelect}
+          columnCount={columnCount}
+          previewingImageId={previewingImageId}
+          selectedIds={selectedIds}
+          onSelectionChange={onSelectionChange}
         />
       )}
     </div>
-  );
+    {selectedIds.length > 0 && (
+      <SelectionBar
+        selectedCount={selectedIds.length}
+        totalCount={images.length}
+        onSelectAll={() => onSelectionChange(images.map((img) => img.id))}
+        onDelete={onDeleteSelected}
+        onClear={() => onSelectionChange([])}
+      />
+    )}
+  </div>
+);
 ```
 
 - [ ] **Step 5: 暂不 build——下个任务在 App.tsx 接上 onDeleteSelected**
@@ -1747,6 +1802,7 @@ export const ImageViews: React.FC<ImageViewsProps> = ({
 ### Task 24: 在 App.tsx 添加 handleDeleteSelected
 
 **Files:**
+
 - Modify: `src/renderer/App.tsx`
 
 - [ ] **Step 1: import Modal 与 removeImages action**
@@ -1756,50 +1812,66 @@ export const ImageViews: React.FC<ImageViewsProps> = ({
 ```tsx
 import { Layout, Button, ConfigProvider, App as AntdApp, Modal } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { setImages, setLoading, setCurrentMonth, setSortField, setSortOrder, setSelectedIds, removeImages } from './store/slices/imageSlice';
+import {
+  setImages,
+  setLoading,
+  setCurrentMonth,
+  setSortField,
+  setSortOrder,
+  setSelectedIds,
+  removeImages,
+} from './store/slices/imageSlice';
 ```
 
 - [ ] **Step 2: 在 useImageAPI 解构里加 deleteImages**
 
 ```tsx
-  const { scanImages, getMonths, getImages, deleteImages: deleteImagesApi, deleteMonthImages } = useImageAPI();
+const {
+  scanImages,
+  getMonths,
+  getImages,
+  deleteImages: deleteImagesApi,
+  deleteMonthImages,
+} = useImageAPI();
 ```
 
 - [ ] **Step 3: 在 handleReset 之前添加 handleDeleteSelected**
 
 ```tsx
-  const handleDeleteSelected = () => {
-    const ids = [...selectedIds];
-    if (ids.length === 0) return;
-    Modal.confirm({
-      title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
-      content: `将永久删除已选的 ${ids.length} 张图片，此操作不可撤销。`,
-      okText: `删除 ${ids.length} 张`,
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          // If a previewing image is being deleted, close preview first.
-          if (previewingImage && ids.includes(previewingImage.id)) {
-            setPreviewVisible(false);
-          }
-          const result = await deleteImagesApi(ids);
-          if (result?.success) {
-            dispatch(removeImages(ids));
-            messageApi.success(`已删除 ${result.deleted} 张图片`);
-            // Refresh months count
-            await loadMonths();
-          } else {
-            messageApi.error(`删除失败：成功 ${result?.deleted ?? 0} / 失败 ${result?.failed ?? ids.length}`);
-          }
-        } catch (err) {
-          console.error('Delete failed:', err);
-          messageApi.error('删除失败');
+const handleDeleteSelected = () => {
+  const ids = [...selectedIds];
+  if (ids.length === 0) return;
+  Modal.confirm({
+    title: '确认删除',
+    icon: <ExclamationCircleOutlined />,
+    content: `将永久删除已选的 ${ids.length} 张图片，此操作不可撤销。`,
+    okText: `删除 ${ids.length} 张`,
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // If a previewing image is being deleted, close preview first.
+        if (previewingImage && ids.includes(previewingImage.id)) {
+          setPreviewVisible(false);
         }
-      },
-    });
-  };
+        const result = await deleteImagesApi(ids);
+        if (result?.success) {
+          dispatch(removeImages(ids));
+          messageApi.success(`已删除 ${result.deleted} 张图片`);
+          // Refresh months count
+          await loadMonths();
+        } else {
+          messageApi.error(
+            `删除失败：成功 ${result?.deleted ?? 0} / 失败 ${result?.failed ?? ids.length}`,
+          );
+        }
+      } catch (err) {
+        console.error('Delete failed:', err);
+        messageApi.error('删除失败');
+      }
+    },
+  });
+};
 ```
 
 - [ ] **Step 4: 把 onDeleteSelected 传给 ImageViews**
@@ -1807,7 +1879,7 @@ import { setImages, setLoading, setCurrentMonth, setSortField, setSortOrder, set
 在 ImageViews 元素上追加：
 
 ```tsx
-              onDeleteSelected={handleDeleteSelected}
+onDeleteSelected = { handleDeleteSelected };
 ```
 
 - [ ] **Step 5: 验证 build + 手测**
@@ -1815,6 +1887,7 @@ import { setImages, setLoading, setCurrentMonth, setSortField, setSortOrder, set
 Run: `npm run build:react` → Compiled successfully
 
 Run: `npm run dev`：
+
 - 选中几张 → SelectionBar 浮现
 - 点全选 → 全部选中
 - 点 ✕ → 选择清空，bar 消失
@@ -1835,22 +1908,23 @@ git commit -m "feat(delete): wire batch delete with Modal.confirm and preview-aw
 ### Task 25: 在 TopFilterBar 月份 tag 上添加 hover × 按钮
 
 **Files:**
+
 - Modify: `src/renderer/components/filters/TopFilterBar.tsx`
 
 - [ ] **Step 1: 更新 props 接口（line 23-33）**
 
 ```tsx
 interface TopFilterBarProps {
-    months: MonthData[];
-    currentMonth: string | null;
-    onMonthSelect: (month: string) => void;
-    onDeleteMonth: (yearMonth: string) => void;
-    columnCount: number;
-    onColumnCountChange: (count: number) => void;
-    scanning: boolean;
-    scanProgress: any;
-    onScan: () => void;
-    onOpenSettings: () => void;
+  months: MonthData[];
+  currentMonth: string | null;
+  onMonthSelect: (month: string) => void;
+  onDeleteMonth: (yearMonth: string) => void;
+  columnCount: number;
+  onColumnCountChange: (count: number) => void;
+  scanning: boolean;
+  scanProgress: any;
+  onScan: () => void;
+  onOpenSettings: () => void;
 }
 ```
 
@@ -1875,51 +1949,50 @@ export const TopFilterBar: React.FC<TopFilterBarProps> = ({
 
 ```tsx
 import {
-    SortAscendingOutlined,
-    SortDescendingOutlined,
-    FilterOutlined,
-    CalendarOutlined,
-    ColumnWidthOutlined,
-    SearchOutlined,
-    SettingOutlined,
-    CloseCircleFilled
+  SortAscendingOutlined,
+  SortDescendingOutlined,
+  FilterOutlined,
+  CalendarOutlined,
+  ColumnWidthOutlined,
+  SearchOutlined,
+  SettingOutlined,
+  CloseCircleFilled,
 } from '@ant-design/icons';
 ```
 
 - [ ] **Step 4: 替换月份 tag 渲染（line 107-121）**
 
 ```tsx
-                        {months.map(month => (
-                            <span
-                                key={month.yearMonth}
-                                className="group/month relative inline-flex"
-                            >
-                                <Tag
-                                    color={currentMonth === month.yearMonth ? 'blue' : undefined}
-                                    className="cursor-pointer transition-all hover:scale-105"
-                                    onClick={() => onMonthSelect(month.yearMonth === currentMonth ? '' : month.yearMonth)}
-                                    style={{
-                                        borderRadius: '6px',
-                                        fontWeight: currentMonth === month.yearMonth ? 600 : 400,
-                                        border: currentMonth === month.yearMonth ? undefined : '1px solid #e5e7eb',
-                                        paddingRight: '20px'
-                                    }}
-                                >
-                                    {month.yearMonth} <span className="text-gray-500">({month.count})</span>
-                                </Tag>
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteMonth(month.yearMonth);
-                                    }}
-                                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/month:opacity-100 text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer p-0"
-                                    title={`删除 ${month.yearMonth} 全部图片`}
-                                >
-                                    <CloseCircleFilled style={{ fontSize: 14 }} />
-                                </button>
-                            </span>
-                        ))}
+{
+  months.map((month) => (
+    <span key={month.yearMonth} className="group/month relative inline-flex">
+      <Tag
+        color={currentMonth === month.yearMonth ? 'blue' : undefined}
+        className="cursor-pointer transition-all hover:scale-105"
+        onClick={() => onMonthSelect(month.yearMonth === currentMonth ? '' : month.yearMonth)}
+        style={{
+          borderRadius: '6px',
+          fontWeight: currentMonth === month.yearMonth ? 600 : 400,
+          border: currentMonth === month.yearMonth ? undefined : '1px solid #e5e7eb',
+          paddingRight: '20px',
+        }}
+      >
+        {month.yearMonth} <span className="text-gray-500">({month.count})</span>
+      </Tag>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDeleteMonth(month.yearMonth);
+        }}
+        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/month:opacity-100 text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer p-0"
+        title={`删除 ${month.yearMonth} 全部图片`}
+      >
+        <CloseCircleFilled style={{ fontSize: 14 }} />
+      </button>
+    </span>
+  ));
+}
 ```
 
 - [ ] **Step 5: 暂不 build——下个任务把 onDeleteMonth 在 App.tsx 接上**
@@ -1929,68 +2002,71 @@ import {
 ### Task 26: 在 App.tsx 添加 handleDeleteMonth
 
 **Files:**
+
 - Modify: `src/renderer/App.tsx`
 
 - [ ] **Step 1: 在 handleDeleteSelected 之后添加 handleDeleteMonth**
 
 ```tsx
-  const handleDeleteMonth = (yearMonth: string) => {
-    const target = months.find((m) => m.yearMonth === yearMonth);
-    const count = target?.count ?? 0;
-    Modal.confirm({
-      title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
-      content: `将永久删除 ${yearMonth} 的全部 ${count} 张图片文件，此操作不可撤销。`,
-      okText: `删除 ${count} 张`,
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          // If currently previewing an image from this month, close preview.
-          if (previewingImage && previewingImage.fileTime?.startsWith(yearMonth)) {
-            setPreviewVisible(false);
-          }
-          const result = await deleteMonthImages(yearMonth);
-          if (result?.success) {
-            messageApi.success(`已删除 ${result.deleted} 张图片`);
-            // Reload months and current view
-            await loadMonths();
-            if (currentMonth === yearMonth) {
-              dispatch(setCurrentMonth(null));
-              const allImages = await getImages({ yearMonth: '', offset: 0, limit: -1 });
-              dispatch(setImages(allImages || []));
-            } else {
-              // Just remove the deleted ids from current store
-              const currentImageIds = images.filter((img) => img.fileTime?.startsWith(yearMonth)).map((img) => img.id);
-              if (currentImageIds.length > 0) dispatch(removeImages(currentImageIds));
-            }
-          } else {
-            messageApi.error(`删除失败：成功 ${result?.deleted ?? 0} / 失败 ${result?.failed ?? 0}`);
-          }
-        } catch (err) {
-          console.error('Delete month failed:', err);
-          messageApi.error('删除失败');
+const handleDeleteMonth = (yearMonth: string) => {
+  const target = months.find((m) => m.yearMonth === yearMonth);
+  const count = target?.count ?? 0;
+  Modal.confirm({
+    title: '确认删除',
+    icon: <ExclamationCircleOutlined />,
+    content: `将永久删除 ${yearMonth} 的全部 ${count} 张图片文件，此操作不可撤销。`,
+    okText: `删除 ${count} 张`,
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // If currently previewing an image from this month, close preview.
+        if (previewingImage && previewingImage.fileTime?.startsWith(yearMonth)) {
+          setPreviewVisible(false);
         }
-      },
-    });
-  };
+        const result = await deleteMonthImages(yearMonth);
+        if (result?.success) {
+          messageApi.success(`已删除 ${result.deleted} 张图片`);
+          // Reload months and current view
+          await loadMonths();
+          if (currentMonth === yearMonth) {
+            dispatch(setCurrentMonth(null));
+            const allImages = await getImages({ yearMonth: '', offset: 0, limit: -1 });
+            dispatch(setImages(allImages || []));
+          } else {
+            // Just remove the deleted ids from current store
+            const currentImageIds = images
+              .filter((img) => img.fileTime?.startsWith(yearMonth))
+              .map((img) => img.id);
+            if (currentImageIds.length > 0) dispatch(removeImages(currentImageIds));
+          }
+        } else {
+          messageApi.error(`删除失败：成功 ${result?.deleted ?? 0} / 失败 ${result?.failed ?? 0}`);
+        }
+      } catch (err) {
+        console.error('Delete month failed:', err);
+        messageApi.error('删除失败');
+      }
+    },
+  });
+};
 ```
 
 - [ ] **Step 2: 把 onDeleteMonth 传给 TopFilterBar（line 241-251）**
 
 ```tsx
-      <TopFilterBar
-        months={months}
-        currentMonth={currentMonth}
-        onMonthSelect={handleMonthClick}
-        onDeleteMonth={handleDeleteMonth}
-        columnCount={columnCount}
-        onColumnCountChange={setColumnCount}
-        scanning={scanning}
-        scanProgress={progress}
-        onScan={handleScan}
-        onOpenSettings={() => setSettingsVisible(true)}
-      />
+<TopFilterBar
+  months={months}
+  currentMonth={currentMonth}
+  onMonthSelect={handleMonthClick}
+  onDeleteMonth={handleDeleteMonth}
+  columnCount={columnCount}
+  onColumnCountChange={setColumnCount}
+  scanning={scanning}
+  scanProgress={progress}
+  onScan={handleScan}
+  onOpenSettings={() => setSettingsVisible(true)}
+/>
 ```
 
 - [ ] **Step 3: 验证 build + 手测**
@@ -1998,6 +2074,7 @@ import {
 Run: `npm run build:react` → Compiled successfully
 
 Run: `npm run dev`：
+
 - hover 月份 tag → 红色 × 按钮 fade-in
 - 点 × → Modal 确认 → 确认 → 文件物理删除 + 月份消失 + 当前视图刷新
 - 删除当前正在浏览的月份 → 自动切到"全部"
@@ -2016,6 +2093,7 @@ git commit -m "feat(delete): hover-X month delete with Modal.confirm and view re
 ### Task 27: 更新 ESC 键 handler 优先级
 
 **Files:**
+
 - Modify: `src/renderer/App.tsx:84-92` (escape shortcut handler)
 
 - [ ] **Step 1: 替换 escape handler**
@@ -2045,6 +2123,7 @@ git commit -m "feat(delete): hover-X month delete with Modal.confirm and view re
 Run: `npm run build:react` → Compiled successfully
 
 Run: `npm run dev`：
+
 - 预览打开 + 已有选中 → ESC 关预览（保留 selectedIds）→ 再 ESC 清空 selectedIds
 - 设置打开 + 已有选中 → ESC 关设置（保留 selectedIds）→ 再 ESC 清空 selectedIds
 - 仅选中无预览/设置 → ESC 直接清空选择
