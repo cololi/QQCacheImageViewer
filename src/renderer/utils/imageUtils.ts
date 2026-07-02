@@ -1,5 +1,7 @@
 import { Image } from '../../shared/types';
 
+export const isGifFormat = (format?: string): boolean => format?.toLowerCase() === 'gif';
+
 /**
  * Format file size to human readable format
  */
@@ -27,10 +29,10 @@ export const formatDate = (date: Date): string => {
 
 /**
  * Get image URL for preview.
- * Use thumbPath if available, otherwise use filePath.
+ * GIFs use the original file to preserve animation; still images use thumbPath if available.
  */
 export const getImageUrl = (image: Image): string => {
-  const path = image.thumbPath || image.filePath;
+  const path = isGifFormat(image.format) ? image.filePath : image.thumbPath || image.filePath;
   // Use custom protocol for secure local file access
   return `local-resource://${encodeURIComponent(path)}`;
 };
@@ -72,6 +74,7 @@ export interface MediaItem {
   raw: Image;
   id: number;
   isVideo: boolean;
+  isGif: boolean;
   orient: Orient;
   ratio?: number;
   /** YYYYMMDD, used for grouping + custom date-range comparison. */
@@ -92,7 +95,8 @@ export interface MediaItem {
 }
 
 /** Local-midnight epoch ms for a Date (for whole-day offset math). */
-const midnight = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const midnight = (d: Date): number =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
 /**
  * Derive a {@link MediaItem} from a raw image record.
@@ -102,6 +106,7 @@ const midnight = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.
 export const deriveMediaItem = (image: Image, todayMid: number): MediaItem => {
   const fmt = (image.format || '').toLowerCase();
   const isVideo = isVideoFormat(fmt);
+  const isGif = isGifFormat(fmt);
   const ratio =
     image.ratio ?? (image.width && image.height ? image.width / image.height : undefined);
 
@@ -117,6 +122,7 @@ export const deriveMediaItem = (image: Image, todayMid: number): MediaItem => {
     raw: image,
     id: image.id,
     isVideo,
+    isGif,
     orient: orientOf(ratio),
     ratio,
     dayKey,
@@ -135,8 +141,12 @@ export const deriveMediaItem = (image: Image, todayMid: number): MediaItem => {
     name: image.hash,
     ext: `.${fmt}`,
     // Video grid stills load the file itself (seeked to 0.5s to force a frame);
-    // images use their thumbnail.
-    srcUrl: isVideo ? `${getMediaUrl(image)}#t=0.5` : getImageUrl(image),
+    // GIFs load the original so animation is preserved; still images use their thumbnail.
+    srcUrl: isVideo
+      ? `${getMediaUrl(image)}#t=0.5`
+      : isGif
+        ? getMediaUrl(image)
+        : getImageUrl(image),
     fullUrl: getMediaUrl(image),
   };
 };

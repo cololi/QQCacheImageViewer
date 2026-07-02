@@ -20,7 +20,13 @@ const PAGE_SIZE = 500; // db clamps to its MAX_QUERY_LIMIT; page through to load
 
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { scanImages, getImages, deleteImages: deleteImagesApi } = useImageAPI();
+  const {
+    scanImages,
+    getImages,
+    deleteImages: deleteImagesApi,
+    saveImage,
+    copyImageToClipboard,
+  } = useImageAPI();
   const { images, selectedIds } = useSelector((state: RootState) => state.images);
   const { message: messageApi } = AntdApp.useApp();
 
@@ -54,7 +60,11 @@ const AppContent: React.FC = () => {
     try {
       const result = await scanImages({});
       if (result.success) {
-        messageApi.open({ type: 'success', content: `扫描完成：${result.totalImages} 项`, key: 'scan' });
+        messageApi.open({
+          type: 'success',
+          content: `扫描完成：${result.totalImages} 项`,
+          key: 'scan',
+        });
         await loadAll();
       } else {
         messageApi.open({ type: 'error', content: result.message, key: 'scan' });
@@ -91,34 +101,83 @@ const AppContent: React.FC = () => {
     [dispatch],
   );
 
-  const handleDeleteSelected = useCallback(() => {
-    const ids = [...selectedIds];
-    if (ids.length === 0) return;
-    Modal.confirm({
-      title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
-      content: `将永久删除已选的 ${ids.length} 项，此操作不可撤销。`,
-      okText: `删除 ${ids.length} 项`,
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const result = await deleteImagesApi(ids);
-          if (result?.success) {
-            dispatch(removeImages(ids));
-            messageApi.success(`已删除 ${result.deleted} 项`);
-          } else {
-            messageApi.error(
-              `删除失败：成功 ${result?.deleted ?? 0} / 失败 ${result?.failed ?? ids.length}`,
-            );
-          }
-        } catch (err) {
-          console.error('Delete failed:', err);
-          messageApi.error('删除失败');
+  const handleDownloadImage = useCallback(
+    async (image: Image) => {
+      try {
+        const result = await saveImage(image);
+        if (result.success) {
+          messageApi.success(result.message || '图片已下载');
+        } else if (result.message === '已取消') {
+          messageApi.info('已取消下载');
+        } else {
+          messageApi.error(result.message || '下载失败');
         }
-      },
-    });
-  }, [selectedIds, deleteImagesApi, dispatch, messageApi]);
+      } catch (err) {
+        console.error('Download failed:', err);
+        messageApi.error('下载失败');
+      }
+    },
+    [saveImage, messageApi],
+  );
+
+  const handleCopyImage = useCallback(
+    async (image: Image) => {
+      try {
+        const result = await copyImageToClipboard(image);
+        if (result.success) {
+          messageApi.success(result.message || '已复制图片');
+        } else {
+          messageApi.error(result.message || '复制失败');
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+        messageApi.error('复制失败');
+      }
+    },
+    [copyImageToClipboard, messageApi],
+  );
+
+  const handleDeleteImages = useCallback(
+    async (ids: number[]): Promise<boolean> => {
+      if (ids.length === 0) return false;
+
+      return new Promise((resolve) => {
+        Modal.confirm({
+          title: '确认删除',
+          icon: <ExclamationCircleOutlined />,
+          content: `将永久删除 ${ids.length} 项，此操作不可撤销。`,
+          okText: `删除 ${ids.length} 项`,
+          okType: 'danger',
+          cancelText: '取消',
+          onOk: async () => {
+            try {
+              const result = await deleteImagesApi(ids);
+              if (result?.success) {
+                dispatch(removeImages(ids));
+                messageApi.success(`已删除 ${result.deleted} 项`);
+                resolve(true);
+              } else {
+                messageApi.error(
+                  `删除失败：成功 ${result?.deleted ?? 0} / 失败 ${result?.failed ?? ids.length}`,
+                );
+                resolve(false);
+              }
+            } catch (err) {
+              console.error('Delete failed:', err);
+              messageApi.error('删除失败');
+              resolve(false);
+            }
+          },
+          onCancel: () => resolve(false),
+        });
+      });
+    },
+    [deleteImagesApi, dispatch, messageApi],
+  );
+
+  const handleDeleteSelected = useCallback(() => {
+    void handleDeleteImages([...selectedIds]);
+  }, [selectedIds, handleDeleteImages]);
 
   const openSettings = useCallback(() => setSettingsVisible(true), []);
 
@@ -146,6 +205,9 @@ const AppContent: React.FC = () => {
         selectedIds={selectedIds}
         onSelectionChange={handleSelectionChange}
         onDeleteSelected={handleDeleteSelected}
+        onDownloadImage={handleDownloadImage}
+        onCopyImage={handleCopyImage}
+        onDeleteImages={handleDeleteImages}
         onOpenSettings={openSettings}
       />
       <SettingsModal open={settingsVisible} onClose={() => setSettingsVisible(false)} />

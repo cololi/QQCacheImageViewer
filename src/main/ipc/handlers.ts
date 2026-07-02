@@ -26,6 +26,7 @@ import {
   getImages,
   saveImages,
   getImageCount,
+  getImageHashes,
   deleteImages as dbDeleteImages,
   deleteImagesByMonth,
 } from '../services/db-service';
@@ -37,6 +38,7 @@ import {
 import {
   copyFile,
   copyFiles,
+  copyImageToClipboard,
   deleteToRecycleBin,
   deleteFilesPermanently,
   exportAsZip,
@@ -58,6 +60,17 @@ import { addAllowedRoot } from '../utils/path-guard';
 const DEFAULT_PAGE_SIZE = 200;
 const SCAN_SAVE_BATCH_SIZE = 500;
 
+type MediaResource = { filePath: string; thumbPath?: string };
+
+function allowMediaResourceRoots(images: MediaResource[]): void {
+  for (const image of images) {
+    addAllowedRoot(path.dirname(image.filePath));
+    if (image.thumbPath) {
+      addAllowedRoot(path.dirname(image.thumbPath));
+    }
+  }
+}
+
 /**
  * Register all 21 invocable IPC handlers.
  *
@@ -72,7 +85,8 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
     // Reset cancellation flag at the start of every new scan.
     resetScanAbort();
 
-    let scanPaths: string[] = input?.paths ?? [];
+    const scanOptions = input ?? {};
+    let scanPaths: string[] = scanOptions.paths ?? [];
 
     if (scanPaths.length === 0) {
       scanPaths = await detectQQCachePaths();
@@ -86,6 +100,7 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
     }
 
     console.log('Scanning paths:', scanPaths);
+    const existingHashes = scanOptions.incremental === false ? undefined : getImageHashes();
 
     let scannedImages = 0;
     let pendingImages: ImageMetadata[] = [];
@@ -101,7 +116,7 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
 
     await scanQQCacheDirectory(
       scanPaths,
-      input ?? {},
+      { ...scanOptions, existingHashes },
       (month, processed, total, percent) => {
         const win = getMainWindow();
         if (!win || win.isDestroyed()) return;
@@ -114,6 +129,7 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
       },
       async (images) => {
         scannedImages += images.length;
+        allowMediaResourceRoots(images);
         pendingImages.push(...images);
         if (pendingImages.length >= SCAN_SAVE_BATCH_SIZE) {
           await flushPendingImages();
@@ -126,7 +142,10 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
     return {
       success: true,
       totalImages: scannedImages,
-      message: `成功扫描 ${scannedImages} 张图片`,
+      message:
+        existingHashes && scannedImages === 0
+          ? '扫描完成，未发现新媒体'
+          : `成功扫描 ${scannedImages} 项媒体`,
     };
   });
 
@@ -137,7 +156,7 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
   registerHandler(IPC.GetImages, schemas.GetImagesInput, async (params) => {
     // Mirror previous behavior: if limit is missing or non-positive, default it.
     const limit = params.limit && params.limit > 0 ? params.limit : DEFAULT_PAGE_SIZE;
-    return getImages({
+    const images = getImages({
       yearMonth: params.yearMonth,
       format: params.format,
       formats: params.formats,
@@ -150,6 +169,8 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
       offset: params.offset ?? 0,
       limit,
     });
+    allowMediaResourceRoots(images);
+    return images;
   });
 
   registerHandler(IPC.GetImageCount, schemas.GetImageCountInput, async (yearMonth) => {
@@ -164,6 +185,10 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
 
   registerHandler(IPC.CopyFiles, schemas.CopyFilesInput, async ([sources, destinationFolder]) => {
     return copyFiles(sources, destinationFolder);
+  });
+
+  registerHandler(IPC.CopyImageToClipboard, schemas.CopyImageToClipboardInput, async (image) => {
+    return copyImageToClipboard(image.filePath);
   });
 
   registerHandler(IPC.DeleteToRecycleBin, schemas.DeleteToRecycleBinInput, async (filePaths) => {

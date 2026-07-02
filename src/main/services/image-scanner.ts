@@ -66,14 +66,13 @@ const getSharpLimit = (): Limit => {
 const SUPPORTED_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif'];
 // ponytail: video files are recorded (so they show + play natively in the
 // renderer) but dimensions/duration/poster need ffmpeg — skipped on purpose.
-// They're picked up wherever the scan already walks (Pic/<month>/Ori); QQ's
-// dedicated video cache dir isn't separately traversed — add it here if needed.
 const VIDEO_FORMATS = ['mp4', 'mov', 'webm', 'mkv', 'avi', 'm4v'];
 
 export interface ScanOptions {
   paths?: string[];
   incremental?: boolean;
   includeTemp?: boolean;
+  existingHashes?: Set<string>;
 }
 
 // ---- Scan cancellation ------------------------------------------------------
@@ -140,9 +139,12 @@ export const detectQQCachePaths = async (): Promise<string[]> => {
             const accountBase = path.join(basePath, entry, 'nt_qq', 'nt_data');
             const paths: string[] = [];
 
-            // 并发检查 Pic 和 Thumb 目录
-            const [picExists, thumbExists] = await Promise.all([
+            // 并发检查 Pic、Video 和文件缩略图目录
+            const [picExists, videoExists, thumbExists] = await Promise.all([
               access(path.join(accountBase, 'Pic'), fs.constants.F_OK)
+                .then(() => true)
+                .catch(() => false),
+              access(path.join(accountBase, 'Video'), fs.constants.F_OK)
                 .then(() => true)
                 .catch(() => false),
               access(path.join(accountBase, 'File', 'Thumb'), fs.constants.F_OK)
@@ -154,6 +156,12 @@ export const detectQQCachePaths = async (): Promise<string[]> => {
               const picPath = path.join(accountBase, 'Pic');
               console.log('Found QQ Pic directory:', picPath);
               paths.push(picPath);
+            }
+
+            if (videoExists) {
+              const videoPath = path.join(accountBase, 'Video');
+              console.log('Found QQ Video directory:', videoPath);
+              paths.push(videoPath);
             }
 
             if (thumbExists) {
@@ -201,7 +209,7 @@ export const getImageDimensions = async (
       const metadata = await sharp(filePath).metadata();
       return {
         width: metadata.width,
-        height: metadata.height,
+        height: metadata.pageHeight ?? metadata.height,
       };
     } catch (error) {
       console.error(`Failed to get dimensions for ${filePath}:`, error);
@@ -270,9 +278,7 @@ const processFile = async (
     // Videos: sharp can't decode them, so skip dimension extraction. The
     // renderer plays them via a <video> element and reads dimensions/duration
     // client-side. Images: read dimensions from thumbnail if present, else original.
-    const dimensions = isVideo
-      ? {}
-      : await getImageDimensions(thumbPath || filePath);
+    const dimensions = isVideo ? {} : await getImageDimensions(thumbPath || filePath);
 
     const ratio =
       dimensions.width && dimensions.height ? dimensions.width / dimensions.height : undefined;
@@ -420,6 +426,7 @@ export const scanQQCacheDirectory = async (
 ): Promise<ImageMetadata[]> => {
   const allImages: ImageMetadata[] = [];
   const basePaths = Array.isArray(basePathOrPaths) ? basePathOrPaths : [basePathOrPaths];
+  const existingHashes = _options.incremental === false ? undefined : _options.existingHashes;
 
   if (basePaths.length === 0) {
     throw new Error('未提供扫描路径');
@@ -471,7 +478,7 @@ export const scanQQCacheDirectory = async (
               onProgress(task.month, processedFilesBeforeTask + processed, 0, totalPercent);
             }
           },
-          undefined,
+          existingHashes,
           onImages,
         );
 

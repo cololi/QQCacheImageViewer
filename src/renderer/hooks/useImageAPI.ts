@@ -9,7 +9,7 @@
  * which centralizes channel constants and envelope unwrapping.
  */
 import { useCallback } from 'react';
-import { QueryParams, ScanProgress } from '../../shared/types';
+import { Image, QueryParams, ScanProgress } from '../../shared/types';
 import { ipc, ScanImagesOptions } from '../lib/ipc-client';
 
 export const useImageAPI = () => {
@@ -26,6 +26,8 @@ export const useImageAPI = () => {
       ipc.deleteImages(ids),
     [],
   );
+  const saveImage = useCallback((image: Image) => ipc.saveImage(image), []);
+  const copyImageToClipboard = useCallback((image: Image) => ipc.copyImageToClipboard(image), []);
 
   const deleteMonthImages = useCallback(
     (yearMonth: string): Promise<{ success: boolean; deleted: number; failed: number }> =>
@@ -39,6 +41,8 @@ export const useImageAPI = () => {
     getImages,
     getImageCount,
     deleteImages,
+    saveImage,
+    copyImageToClipboard,
     deleteMonthImages,
   };
 };

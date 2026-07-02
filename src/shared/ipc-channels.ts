@@ -5,7 +5,7 @@
  * (e.g. settingsSlice direct invokes) continues to work during migration.
  *
  * Counts:
- *  - 24 invocable channels (request/response via ipcRenderer.invoke / ipcMain.handle)
+ *  - 25 invocable channels (request/response via ipcRenderer.invoke / ipcMain.handle)
  *  -  1 event channel    (one-way main -> renderer via webContents.send)
  */
 export const IPC = {
@@ -19,6 +19,7 @@ export const IPC = {
   // File operations
   CopyFile: 'copy-file',
   CopyFiles: 'copy-files',
+  CopyImageToClipboard: 'copy-image-to-clipboard',
   DeleteToRecycleBin: 'delete-to-recycle-bin',
   DeleteImages: 'delete-images',
   DeleteMonthImages: 'delete-month-images',

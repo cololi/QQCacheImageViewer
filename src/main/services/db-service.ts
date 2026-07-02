@@ -129,6 +129,8 @@ export const initializeDatabase = () => {
       CREATE INDEX IF NOT EXISTS idx_file_time ON images(file_time);
       CREATE INDEX IF NOT EXISTS idx_hash ON images(hash);
       CREATE INDEX IF NOT EXISTS idx_file_time_month ON images(file_time_month);
+      CREATE INDEX IF NOT EXISTS idx_file_time_month_file_time ON images(file_time_month, file_time DESC);
+      CREATE INDEX IF NOT EXISTS idx_format_file_time ON images(format, file_time DESC);
     `);
 
     // Create scan progress table
@@ -164,9 +166,21 @@ export const saveImages = async (images: ImageMetadata[]): Promise<boolean> => {
 
   try {
     const stmt = db.prepare(`
-      INSERT OR REPLACE INTO images
+      INSERT INTO images
       (hash, year_month, format, file_path, thumb_path, file_size, width, height, ratio, file_time, file_time_month, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(hash) DO UPDATE SET
+        year_month = excluded.year_month,
+        format = excluded.format,
+        file_path = excluded.file_path,
+        thumb_path = excluded.thumb_path,
+        file_size = excluded.file_size,
+        width = excluded.width,
+        height = excluded.height,
+        ratio = excluded.ratio,
+        file_time = excluded.file_time,
+        file_time_month = excluded.file_time_month,
+        updated_at = CURRENT_TIMESTAMP
     `);
 
     const insertBatch = db.transaction((imgs: ImageMetadata[]) => {
@@ -281,6 +295,18 @@ export const getImageCount = (yearMonth?: string): number => {
   } catch (error) {
     console.error('Failed to get image count:', error);
     return 0;
+  }
+};
+
+export const getImageHashes = (): Set<string> => {
+  if (!db) return new Set();
+
+  try {
+    const rows = db.prepare('SELECT hash FROM images').all() as Array<{ hash: string }>;
+    return new Set(rows.map((row) => row.hash));
+  } catch (error) {
+    console.error('Failed to get image hashes:', error);
+    return new Set();
   }
 };
 

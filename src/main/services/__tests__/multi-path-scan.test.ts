@@ -70,6 +70,7 @@ describe('Multi-path Scanning', () => {
       const paths = await scannerService.detectQQCachePaths();
 
       expect(paths).toContainEqual(expect.stringContaining('123456\\nt_qq\\nt_data\\Pic'));
+      expect(paths).toContainEqual(expect.stringContaining('123456\\nt_qq\\nt_data\\Video'));
       expect(paths.length).toBeGreaterThan(0);
     });
   });

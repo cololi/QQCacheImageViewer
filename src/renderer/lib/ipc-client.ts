@@ -29,7 +29,7 @@ interface IpcEnvelope<T> {
   details?: unknown;
 }
 
-interface FileOpResult {
+export interface FileOpResult {
   success: boolean;
   message: string;
 }
@@ -128,6 +128,9 @@ export const ipc = {
 
   copyFiles: (sources: string[], destinationFolder: string): Promise<CopyFilesResult> =>
     call<CopyFilesResult>(IPC.CopyFiles, sources, destinationFolder),
+
+  copyImageToClipboard: (image: Image): Promise<FileOpResult> =>
+    call<FileOpResult>(IPC.CopyImageToClipboard, image),
 
   deleteToRecycleBin: (filePaths: string[]): Promise<DeleteToRecycleBinResult> =>
     call<DeleteToRecycleBinResult>(IPC.DeleteToRecycleBin, filePaths),

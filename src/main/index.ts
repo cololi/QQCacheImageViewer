@@ -121,7 +121,7 @@ app.on('ready', () => {
 
   // Register custom protocol for local resources
   protocol.handle('local-resource', (request) => {
-    const url = request.url.replace('local-resource://', '');
+    const url = request.url.replace('local-resource://', '').split('#', 1)[0];
     const decodedUrl = decodeURIComponent(url);
     try {
       // Trust boundary: the renderer can request any local-resource:// URL, so

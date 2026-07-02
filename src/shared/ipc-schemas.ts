@@ -79,6 +79,8 @@ export const SaveImageInput = z
   })
   .passthrough();
 
+export const CopyImageToClipboardInput = SaveImageInput;
+
 // ---- Dialogs --------------------------------------------------------------
 
 /** [title, defaultFileName, filters?] */

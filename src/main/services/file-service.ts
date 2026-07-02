@@ -1,4 +1,4 @@
-import { shell, dialog } from 'electron';
+import { shell, dialog, clipboard, nativeImage } from 'electron';
 import fs from 'fs-extra';
 import { createWriteStream } from 'fs';
 import path from 'path';
@@ -103,6 +103,34 @@ export async function copyFiles(
       failed: sources.length,
       message: `复制文件失败: ${errorMsg}`,
     };
+  }
+}
+
+export async function copyImageToClipboard(
+  filePath: string,
+): Promise<{ success: boolean; message: string }> {
+  let safePath: string;
+  try {
+    safePath = assertSafePath(filePath);
+  } catch {
+    return { success: false, message: `不允许的路径: ${filePath}` };
+  }
+
+  try {
+    if (!fs.existsSync(safePath)) {
+      return { success: false, message: '文件不存在' };
+    }
+
+    const image = nativeImage.createFromPath(safePath);
+    if (image.isEmpty()) {
+      return { success: false, message: '无法读取图片' };
+    }
+
+    clipboard.writeImage(image);
+    return { success: true, message: '已复制图片到剪贴板' };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : '未知错误';
+    return { success: false, message: `复制图片失败: ${errorMsg}` };
   }
 }
 

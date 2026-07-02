@@ -4,6 +4,7 @@
  */
 
 import * as scannerService from '../image-scanner';
+import sharp from 'sharp';
 
 // Mock fs (image-scanner uses native fs with promisify)
 jest.mock('fs', () => ({
@@ -148,6 +149,21 @@ describe('Image Scanner Service', () => {
         }
       }
       expect(true).toBe(true);
+    });
+
+    it('should use animated image page height for dimensions', async () => {
+      const sharpMock = sharp as unknown as jest.Mock;
+      sharpMock.mockImplementationOnce(() => ({
+        metadata: jest.fn().mockResolvedValue({
+          width: 320,
+          height: 960,
+          pageHeight: 240,
+        }),
+      }));
+
+      const result = await scannerService.getImageDimensions('/mock/path/animated.gif');
+
+      expect(result).toEqual({ width: 320, height: 240 });
     });
 
     it('should have string format when present', async () => {

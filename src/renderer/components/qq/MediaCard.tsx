@@ -1,7 +1,8 @@
 /**
  * A single gallery card: image or video still, video play overlay + duration
  * badge, optional size label, hover-preview (video autoplays after 2s) and the
- * selection checkbox / selected overlay.
+ * selection checkbox / selected overlay. The corner checkbox toggles selection;
+ * clicking the rest of the card opens preview.
  *
  * Hover + preview state is kept local (not lifted) so hovering one card doesn't
  * re-render the whole grid.
@@ -35,20 +36,12 @@ const badge: CSS = {
 interface Props {
   item: MediaItem;
   selected: boolean;
-  selectionActive: boolean;
   showSize: boolean;
   onOpen: (item: MediaItem) => void;
   onToggleSelect: (id: number) => void;
 }
 
-const MediaCardImpl: React.FC<Props> = ({
-  item,
-  selected,
-  selectionActive,
-  showSize,
-  onOpen,
-  onToggleSelect,
-}) => {
+const MediaCardImpl: React.FC<Props> = ({ item, selected, showSize, onOpen, onToggleSelect }) => {
   const [hovered, setHovered] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [dur, setDur] = useState('');
@@ -73,7 +66,7 @@ const MediaCardImpl: React.FC<Props> = ({
   return (
     <div
       className="qq-card"
-      onClick={() => (selectionActive ? onToggleSelect(item.id) : onOpen(item))}
+      onClick={() => onOpen(item)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       style={{
@@ -88,18 +81,20 @@ const MediaCardImpl: React.FC<Props> = ({
         transition: 'transform .22s ease,filter .22s ease',
       }}
     >
-      <div style={{ position: 'relative', width: '100%', aspectRatio: item.ar, overflow: 'hidden' }}>
+      <div
+        style={{ position: 'relative', width: '100%', aspectRatio: item.ar, overflow: 'hidden' }}
+      >
         {item.isVideo ? (
           <video
             src={item.srcUrl}
-            preload="metadata"
+            preload="none"
             muted
             playsInline
             onLoadedMetadata={(e) => setDur(formatDuration(e.currentTarget.duration))}
             style={fillStyle}
           />
         ) : (
-          <img src={item.srcUrl} loading="lazy" alt="" style={fillStyle} />
+          <img src={item.srcUrl} loading="lazy" decoding="async" alt="" style={fillStyle} />
         )}
 
         {item.isVideo && previewing && (
@@ -109,6 +104,8 @@ const MediaCardImpl: React.FC<Props> = ({
             muted
             loop
             playsInline
+            preload="metadata"
+            onLoadedMetadata={(e) => setDur(formatDuration(e.currentTarget.duration))}
             style={{ position: 'absolute', inset: 0, ...fillStyle }}
           />
         )}
@@ -147,7 +144,15 @@ const MediaCardImpl: React.FC<Props> = ({
 
         {item.isVideo && dur && (
           <div
-            style={{ ...badge, right: 8, bottom: 8, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 3 }}
+            style={{
+              ...badge,
+              right: 8,
+              bottom: 8,
+              padding: '2px 6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+            }}
           >
             <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff">
               <path d="M8 5v14l11-7z" />

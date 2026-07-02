@@ -24,6 +24,12 @@ jest.mock('electron', () => ({
     setApplicationMenu: jest.fn(),
     buildFromTemplate: jest.fn(),
   },
+  clipboard: {
+    writeImage: jest.fn(),
+  },
+  nativeImage: {
+    createFromPath: jest.fn(() => ({ isEmpty: jest.fn(() => false) })),
+  },
 }));
 
 // Mock Electron IPC for window.electron (separate instance for renderer)
