@@ -158,6 +158,15 @@ export const ipc = {
   showOpenDirectoryDialog: (title: string): Promise<OpenDirDialogResult> =>
     call<OpenDirDialogResult>(IPC.ShowOpenDirectoryDialog, title),
 
+  // ---- Custom window controls (raw — registered with registerRawHandler) ----
+  minimizeWindow: (): Promise<{ success: boolean }> =>
+    callRaw<{ success: boolean }>(IPC.WindowMinimize),
+
+  toggleMaximizeWindow: (): Promise<{ maximized: boolean }> =>
+    callRaw<{ maximized: boolean }>(IPC.WindowMaximizeToggle),
+
+  closeWindow: (): Promise<{ success: boolean }> => callRaw<{ success: boolean }>(IPC.WindowClose),
+
   // ---- Settings (use callRaw — registered with registerRawHandler, no envelope) ----
   getSettings: (): Promise<AppSettings> => callRaw<AppSettings>(IPC.GetSettings),
 

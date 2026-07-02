@@ -40,8 +40,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
       setLoading(true);
       const values = await form.validateFields();
 
-      // Merge over existing preferences — the form only holds a subset of fields
-      // (e.g. defaultExportPath), so replacing wholesale would wipe theme etc.
+      // Merge over existing preferences because the form only holds a subset of fields.
       const result = await dispatch(
         saveSettings({
           ...settings,

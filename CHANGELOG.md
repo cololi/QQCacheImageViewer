@@ -12,7 +12,6 @@
 - 按月份、大小、方向过滤
 - 全屏图片预览（缩放、旋转）
 - 图片导出（单张/ZIP 批量）
-- 深色/浅色主题
 - 键盘快捷键支持
 
 [未发布]: https://github.com/Cololi/QQCacheImageViewer/commits/main

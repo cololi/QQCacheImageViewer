@@ -38,9 +38,6 @@ export const lightTheme: ThemeConfig = {
       headerBg: '#fafafa',
       headerBorderRadius: 2,
     },
-    Menu: {
-      darkItemBg: 'transparent',
-    },
     Layout: {
       headerBg: '#ffffff',
       headerHeight: 64,

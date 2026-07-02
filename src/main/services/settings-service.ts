@@ -53,16 +53,23 @@ function resolveDefaultExportPath(): string {
  * machines or accounts.
  */
 function applyComputedDefaults(settings: AppSettings): AppSettings {
-  if (!settings.preferences.defaultExportPath) {
-    return {
-      ...settings,
-      preferences: {
-        ...settings.preferences,
-        defaultExportPath: resolveDefaultExportPath(),
-      },
-    };
-  }
-  return settings;
+  const preferences = normalizePreferences(settings.preferences ?? {});
+  return {
+    ...settings,
+    preferences: {
+      ...preferences,
+      defaultExportPath: preferences.defaultExportPath || resolveDefaultExportPath(),
+    },
+  };
+}
+
+function normalizePreferences(preferences: Partial<UserPreferences>): UserPreferences {
+  return {
+    defaultExportPath:
+      preferences.defaultExportPath ?? DEFAULT_SETTINGS.preferences.defaultExportPath,
+    autoScanOnStartup:
+      preferences.autoScanOnStartup ?? DEFAULT_SETTINGS.preferences.autoScanOnStartup,
+  };
 }
 
 /**
@@ -95,10 +102,10 @@ export function setSettings(settings: AppSettings): void {
   const merged = {
     ...current,
     ...settings,
-    preferences: {
+    preferences: normalizePreferences({
       ...current.preferences,
       ...settings.preferences,
-    },
+    }),
   };
 
   store.set(merged);
@@ -112,8 +119,8 @@ export function setPreference<K extends keyof UserPreferences>(
   value: UserPreferences[K],
 ): void {
   const preferences = store.get('preferences') as UserPreferences;
-  preferences[key] = value;
-  store.set('preferences', preferences);
+  const merged = normalizePreferences({ ...preferences, [key]: value });
+  store.set('preferences', merged);
   store.set('lastUpdated', new Date().toISOString());
 }
 
@@ -122,7 +129,7 @@ export function setPreference<K extends keyof UserPreferences>(
  */
 export function updatePreferences(updates: Partial<UserPreferences>): void {
   const preferences = store.get('preferences') as UserPreferences;
-  const merged = { ...preferences, ...updates };
+  const merged = normalizePreferences({ ...preferences, ...updates });
   store.set('preferences', merged);
   store.set('lastUpdated', new Date().toISOString());
 }

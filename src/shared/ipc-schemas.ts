@@ -102,16 +102,18 @@ export const ShowOpenDirectoryDialogInput = z.string();
 // These channels use envelope=false in the registry to preserve back-compat
 // with settingsSlice (which calls ipcRenderer.invoke directly and expects raw values).
 
+const PreferenceKey = z.enum(['defaultExportPath', 'autoScanOnStartup']);
+
 export const GetSettingsInput = NoInput;
 
 /** Full AppSettings object — passed through to the service which validates. */
 export const SetSettingsInput = z.record(z.unknown());
 
 /** preference key */
-export const GetPreferenceInput = z.string();
+export const GetPreferenceInput = PreferenceKey;
 
 /** [key, value] */
-export const SetPreferenceInput = z.tuple([z.string(), z.unknown()]);
+export const SetPreferenceInput = z.tuple([PreferenceKey, z.unknown()]);
 
 /** Partial<UserPreferences> */
 export const UpdatePreferencesInput = z.record(z.unknown());

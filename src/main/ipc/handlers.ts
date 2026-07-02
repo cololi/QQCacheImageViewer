@@ -296,6 +296,27 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
     return getSettings();
   });
 
+  // ---- Custom window controls ---------------------------------------------
+  // The dark design draws its own min/max/close buttons (native titleBarOverlay
+  // is disabled), so the renderer drives the window through these channels.
+  registerRawHandler(IPC.WindowMinimize, schemas.NoInput, () => {
+    getMainWindow()?.minimize();
+    return { success: true };
+  });
+
+  registerRawHandler(IPC.WindowMaximizeToggle, schemas.NoInput, () => {
+    const win = getMainWindow();
+    if (!win) return { maximized: false };
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+    return { maximized: win.isMaximized() };
+  });
+
+  registerRawHandler(IPC.WindowClose, schemas.NoInput, () => {
+    getMainWindow()?.close();
+    return { success: true };
+  });
+
   // ---- Renderer diagnostics -----------------------------------------------
   ipcMain.handle('log-renderer-error', (_evt, payload: unknown) => {
     console.error('[renderer crash]', payload);

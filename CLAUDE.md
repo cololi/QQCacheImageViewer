@@ -46,7 +46,7 @@ This is an **Electron 28 + React 18** desktop app. The process boundary is stric
 
 **Renderer process** (`src/renderer/`) — React, compiled via `react-scripts` → `dist/renderer/`:
 
-- `App.tsx` — Root; wires Redux store, i18n, theme, and top-level layout
+- `App.tsx` — Root; wires Redux store, i18n, Ant Design config, and top-level layout
 - `components/gallery/` — `PinterestGrid.tsx` (masonry layout), `ImageViews.tsx`, `ImagePreview.tsx` (fullscreen modal)
 - `components/filters/` — `FilterPanel.tsx`, `TopFilterBar.tsx`
 - `store/slices/` — `imageSlice.ts`, `filterSlice.ts`, `settingsSlice.ts` (Redux Toolkit)

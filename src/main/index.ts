@@ -72,12 +72,10 @@ const createWindow = () => {
     minWidth: 1000,
     minHeight: 600,
     show: false,
+    backgroundColor: '#06080C',
+    // Frameless but still resizable; the renderer draws custom min/max/close
+    // buttons (see WindowControls) and drives them via IPC.
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#00000000',
-      symbolColor: '#555555',
-      height: 30,
-    },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

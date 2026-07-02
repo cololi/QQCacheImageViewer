@@ -1,5 +1,5 @@
 {
-  "name": "qq-cache-image-viewer",
+  "name": "qq-cache-viewer",
   "version": "0.1.0",
   "description": "QQ 缓存图片查看器 - 浏览和管理 QQ 缓存图片的桌面工具",
   "main": "dist/main/main/index.js",

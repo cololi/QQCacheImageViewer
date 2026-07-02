@@ -64,6 +64,11 @@ const getSharpLimit = (): Limit => {
 };
 
 const SUPPORTED_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif'];
+// ponytail: video files are recorded (so they show + play natively in the
+// renderer) but dimensions/duration/poster need ffmpeg — skipped on purpose.
+// They're picked up wherever the scan already walks (Pic/<month>/Ori); QQ's
+// dedicated video cache dir isn't separately traversed — add it here if needed.
+const VIDEO_FORMATS = ['mp4', 'mov', 'webm', 'mkv', 'avi', 'm4v'];
 
 export interface ScanOptions {
   paths?: string[];
@@ -257,14 +262,17 @@ const processFile = async (
     if (!fileStat.isFile()) return null;
 
     const ext = path.extname(file).slice(1).toLowerCase();
-    if (!SUPPORTED_FORMATS.includes(ext)) return null;
+    const isVideo = VIDEO_FORMATS.includes(ext);
+    if (!SUPPORTED_FORMATS.includes(ext) && !isVideo) return null;
 
     const thumbPath = await getThumbnailPath(basePath, yearMonth, hash, ext);
 
-    // Get dimensions from thumbnail if available, otherwise from original.
-    // sharp's own open handles a missing/unreadable file (returns {}), no pre-check needed.
-    const imageSource = thumbPath || filePath;
-    const dimensions = await getImageDimensions(imageSource);
+    // Videos: sharp can't decode them, so skip dimension extraction. The
+    // renderer plays them via a <video> element and reads dimensions/duration
+    // client-side. Images: read dimensions from thumbnail if present, else original.
+    const dimensions = isVideo
+      ? {}
+      : await getImageDimensions(thumbPath || filePath);
 
     const ratio =
       dimensions.width && dimensions.height ? dimensions.width / dimensions.height : undefined;

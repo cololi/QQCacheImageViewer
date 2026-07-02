@@ -5,7 +5,7 @@
  * (e.g. settingsSlice direct invokes) continues to work during migration.
  *
  * Counts:
- *  - 21 invocable channels (request/response via ipcRenderer.invoke / ipcMain.handle)
+ *  - 24 invocable channels (request/response via ipcRenderer.invoke / ipcMain.handle)
  *  -  1 event channel    (one-way main -> renderer via webContents.send)
  */
 export const IPC = {
@@ -30,6 +30,11 @@ export const IPC = {
   // System dialogs
   ShowSaveDialog: 'show-save-dialog',
   ShowOpenDirectoryDialog: 'show-open-directory-dialog',
+
+  // Custom window chrome (design draws its own min/max/close buttons)
+  WindowMinimize: 'window-minimize',
+  WindowMaximizeToggle: 'window-maximize-toggle',
+  WindowClose: 'window-close',
 
   // Settings (envelope opt-out — preserves legacy direct-invoke shape used by settingsSlice)
   GetSettings: 'get-settings',

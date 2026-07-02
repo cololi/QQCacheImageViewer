@@ -11,9 +11,6 @@ export interface UserPreferences {
 
   // 扫描配置
   autoScanOnStartup: boolean;
-
-  // 界面配置
-  theme: 'light' | 'dark';
 }
 
 /**
@@ -37,7 +34,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     // to whatever user / OS actually runs the app.
     defaultExportPath: '',
     autoScanOnStartup: false,
-    theme: 'light',
   },
 };
 
