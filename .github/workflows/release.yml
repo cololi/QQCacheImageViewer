@@ -26,6 +26,8 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           HUSKY: 0
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+          NPM_CONFIG_REPLACE_REGISTRY_HOST: always
 
       - name: Build packages
         run: npm run dist
