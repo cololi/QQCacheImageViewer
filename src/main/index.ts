@@ -64,6 +64,10 @@ function getRendererUrl(): string {
   return 'http://127.0.0.1:3001';
 }
 
+function getAppIconPath(): string {
+  return path.join(app.getAppPath(), 'public', 'icon.ico');
+}
+
 const createWindow = () => {
   console.log('Creating main window...');
   mainWindow = new BrowserWindow({
@@ -73,6 +77,7 @@ const createWindow = () => {
     minHeight: 600,
     show: false,
     backgroundColor: '#06080C',
+    icon: getAppIconPath(),
     // Frameless but still resizable; the renderer draws custom min/max/close
     // buttons (see WindowControls) and drives them via IPC.
     titleBarStyle: 'hidden',

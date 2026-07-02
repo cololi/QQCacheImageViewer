@@ -30,7 +30,7 @@ jobs:
           NPM_CONFIG_REPLACE_REGISTRY_HOST: always
 
       - name: Build packages
-        run: npm run build && npx electron-builder --publish never
+        run: npm run build && npx electron-builder --win portable --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
@@ -42,9 +42,6 @@ jobs:
             本版本由 GitHub Actions 自动打包生成。
 
             下载说明：
-            - 安装版：下载 NSIS 安装包后按提示安装。
             - 便携版：下载 portable 版本后直接运行，无需安装。
           files: |
-            release/*.exe
-            release/*.blockmap
-            release/latest.yml
+            release/*portable.exe

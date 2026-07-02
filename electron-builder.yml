@@ -55,6 +55,7 @@ nodeGypRebuild: false
 npmRebuild: false
 
 win:
+  icon: public/icon.ico
   target:
     # NSIS 安装包（需要安装）
     - target: nsis
